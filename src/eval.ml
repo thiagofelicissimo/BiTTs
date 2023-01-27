@@ -1,3 +1,4 @@
+open Format
 module T = Term
 module V = Value
 
@@ -49,7 +50,7 @@ let rew_map : T.rew_map ref = ref T.RewTbl.empty
 let nat_rec_zero : T.rew_rule =
   let lhs_spine =
     [{T.binds = 0; T.body = zero};
-     {T.binds = 2; T.body = meta_app 2 [var 1; var 0]};
+     {T.binds = 2; T.body = meta_app 2 [var 0; var 1]};
      {T.binds = 0; T.body = var 1};
      {T.binds = 1; T.body = meta_app 3 [var 0]}] in
   let rhs = var 1 in
@@ -58,11 +59,11 @@ let nat_rec_zero : T.rew_rule =
 let nat_rec_succ : T.rew_rule =
   let lhs_spine =
     [{T.binds = 0; T.body = succ (var 0)};
-     {T.binds = 2; T.body = meta_app 3 [var 1; var 0]};
+     {T.binds = 2; T.body = meta_app 3 [var 0; var 1]};
      {T.binds = 0; T.body = var 2};
      {T.binds = 1; T.body = meta_app 4 [var 0]}] in
   let rhs =
-    meta_app 1 [nat_rec (meta_app 4 [var 0]) (var 2) (meta_app 3 [var 1; var 0]) (var 0); var 0] in
+    meta_app 1 [nat_rec (meta_app 4 [var 0]) (var 2) (meta_app 3 [var 0; var 1]) (var 0); var 0] in
   {T.lhs_spine = lhs_spine; T.rhs = rhs}
 
 (*(var 0) (meta_app 3 [var 1; var 0]) (var 2) (meta_app 4 [var 0]); var 0] in*)
@@ -100,14 +101,17 @@ exception MatchUnderLambda
 exception LenghtMismatch
 exception HeadMismatch
 
+exception NoMatch
+exception Problem
 exception Matched of V.env * T.term
 
 let rec eval (env : V.env) (t : T.term) : V.value =
+  (* printf "%a |- %a@." V.pp_spine env T.pp_term t; *)
   let spv = eval_sp env t.spine in
   match t.head with
   | Ix(n) ->
     begin match List.nth env n with
-      | Value(v) -> v
+      | Value(v) -> v (* then spv should be [], but it is invariant *)
       | Clo(clo) ->
         if List.length spv = clo.binds
         then eval (spv @ clo.env) clo.body
@@ -122,10 +126,10 @@ let rec eval (env : V.env) (t : T.term) : V.value =
           | Matched(new_env, t) -> raise @@ Matched(new_env, t)
           | _ -> () end
         (T.RewTbl.find str !rew_map);
-    {V.head = Symb(str); V.spine = spv}
+    raise NoMatch
     with
     | Matched(new_env, t) -> eval new_env t
-    | Not_found -> {V.head = Symb(str); V.spine = spv} end
+    | Not_found | NoMatch -> {V.head = Symb(str); V.spine = spv} end
 
 and eval_sp (env : V.env) (sp : T.spine) : V.env =
   match sp with
@@ -158,6 +162,7 @@ and match_arg (arg : T.arg) (e : V.enventry) : V.env =
       | Ix(_) -> [e] (* we suppose it is of the right form, so don't need to check *)
       | Symb(_) -> assert false end
 
+(* this function supposes that we only deal with 0-order variables *)
 let rec ext_env (env : V.env) (depth : int) (k : int) : V.env =
   if k = 0 then env
   else
@@ -220,8 +225,17 @@ let t3 = abs (app (abs (var 0)) (var 0)) (* (\f x. f x) (\y.y) *)
 let u3 = abs (var 0) (* (\y.y) *)
 let r3 = equal_vl (eval [] t3) (eval [] u3) 0
 
-
 let plus' = abs (abs (nat_rec (cst "nat") (var 0) (succ (var 0)) (var 1)))
 let t4 = abs (app (app plus' zero) (var 0)) (* \x. 0 + x *)
 let u4 = abs (var 0) (* (\y.y) *)
 let r4 = equal_vl (eval [] t4) (eval [] u4) 0
+
+let t5 = eval [] (app (app plus' (succ (succ (succ zero)))) (succ (succ (succ (succ zero)))))
+let u5 = eval [] (plus (succ (succ (succ zero))) (succ (succ (succ (succ zero)))))
+let v5 = eval [] (succ (succ (succ (succ (succ (succ (succ zero)))))))
+let r5 = equal_vl t5 u5 0
+let r5' = equal_vl t5 v5 0
+
+let t6 = eval [vcst "a"] (app (app plus' (succ (succ (zero)))) (succ (succ (var 0))))
+let u6 = eval [vcst "a"] (plus (succ (succ (zero))) (succ (succ (var 0))))
+let r6 = equal_vl t6 u6 0
