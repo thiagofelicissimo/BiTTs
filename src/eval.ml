@@ -3,6 +3,12 @@ module V = Value
 
 exception Todo
 
+let meta_app (n : int) (args : T.term list) : T.term =
+  {T.head = T.Ix(n);
+   T.spine = List.map (fun t -> {T.binds = 0; T.body = t}) args
+  }
+
+
 let app (t : T.term) (u : T.term) : T.term =
   {T.head = T.Symb("app"); T.spine = [{T.binds = 0; T.body = u}; {T.binds = 0; T.body = t}]}
 
@@ -13,6 +19,9 @@ let vabs (env : V.env) (t : T.term) : V.enventry =
   Value ({V.head = V.Symb("abs"); V.spine = [Clo({V.binds = 1; V.body = t; V.env = env})]})
 
 let vcst (str : string) : V.enventry = Value ({V.head = V.Symb (str); V.spine = []})
+
+let cst (str : string) : T.term =
+  {T.head = T.Symb(str); T.spine = []}
 
 let var (n : int) : T.term =
   {T.head = T.Ix(n); T.spine = []}
@@ -26,7 +35,41 @@ let succ (t : T.term) : T.term =
 let plus (t : T.term) (u : T.term) : T.term =
   {T.head = T.Symb("plus"); T.spine = [{T.binds = 0; T.body = t}; {T.binds = 0; T.body = u}]}
 
+let nat_rec (p : T.term) (p0 : T.term) (ps : T.term) (t : T.term) : T.term =
+  {T.head = T.Symb("nat_rec");
+   T.spine = [{T.binds = 0; T.body = t};
+              {T.binds = 2; T.body = ps};
+              {T.binds = 0; T.body = p0};
+              {T.binds = 1; T.body = p}]
+  }
+
+
 let rew_map : T.rew_map ref = ref T.RewTbl.empty
+
+let nat_rec_zero : T.rew_rule =
+  let lhs_spine =
+    [{T.binds = 0; T.body = zero};
+     {T.binds = 2; T.body = meta_app 2 [var 1; var 0]};
+     {T.binds = 0; T.body = var 1};
+     {T.binds = 1; T.body = meta_app 3 [var 0]}] in
+  let rhs = var 1 in
+  {T.lhs_spine = lhs_spine; T.rhs = rhs}
+
+let nat_rec_succ : T.rew_rule =
+  let lhs_spine =
+    [{T.binds = 0; T.body = succ (var 0)};
+     {T.binds = 2; T.body = meta_app 3 [var 1; var 0]};
+     {T.binds = 0; T.body = var 2};
+     {T.binds = 1; T.body = meta_app 4 [var 0]}] in
+  let rhs =
+    meta_app 1 [nat_rec (meta_app 4 [var 0]) (var 2) (meta_app 3 [var 1; var 0]) (var 0); var 0] in
+  {T.lhs_spine = lhs_spine; T.rhs = rhs}
+
+(*(var 0) (meta_app 3 [var 1; var 0]) (var 2) (meta_app 4 [var 0]); var 0] in*)
+
+let _ =
+  rew_map := T.RewTbl.add "nat_rec" [nat_rec_zero; nat_rec_succ] !rew_map
+
 
 let beta_rule : T.rew_rule =
   let x = {T.head = T.Ix(0); T.spine = []} in
@@ -176,3 +219,9 @@ let r2 = equal_vl (eval [] t2) (eval [] u2) 0
 let t3 = abs (app (abs (var 0)) (var 0)) (* (\f x. f x) (\y.y) *)
 let u3 = abs (var 0) (* (\y.y) *)
 let r3 = equal_vl (eval [] t3) (eval [] u3) 0
+
+
+let plus' = abs (abs (nat_rec (cst "nat") (var 0) (succ (var 0)) (var 1)))
+let t4 = abs (app (app plus' zero) (var 0)) (* \x. 0 + x *)
+let u4 = abs (var 0) (* (\y.y) *)
+let r4 = equal_vl (eval [] t4) (eval [] u4) 0
