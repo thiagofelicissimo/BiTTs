@@ -20,6 +20,14 @@ and arg =
   {body : term;
    binds : int}
 
+type rew_rule =
+  {lhs_spine : spine;
+   rhs : term
+  }
+
+module RewTbl = Map.Make(String)
+type rew_map = (rew_rule list) RewTbl.t
+
 type ty =
   | Star
   | Ty of term
