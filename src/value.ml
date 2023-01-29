@@ -1,49 +1,67 @@
 module T = Term
 open Format
 
-
 type vhead =
   | Symb of string
-  | Var of string
+  | Lvl of int
 
 type value =
-  {head : vhead;
-   spine : env}
+  {
+    head : vhead;
+    env : env
+  }
 
-and env = enventry list
+and env = enve list
 
-and enventry =
-  | Value of value
+and enve =
+  | Val of value
   | Clo of closure
 
 and closure =
-  {binds : int;
-   body : T.term;
-   env : env
+  {
+    binds : int;
+    body : T.term;
+    env : env
   }
 
+type vty =
+  | Star
+  | Val of value
 
-let rec pp_head fmt hd =
+type vctx = (value * vty) list
+
+let pp_vhead fmt hd =
   match hd with
   | Symb(str) -> fprintf fmt "%s" str
-  | Var(str) -> fprintf fmt "%s" str
+  | Lvl(n) -> fprintf fmt "l%s" (string_of_int n)
 
-and pp_value fmt t =
-  if t.spine = []
-  then pp_head fmt t.head
-  else fprintf fmt "%a(%a)" pp_head t.head pp_spine t.spine
+let rec pp_value fmt t =
+  if t.env = []
+  then pp_vhead fmt t.head
+  else fprintf fmt "%a(%a)" pp_vhead t.head pp_env t.env
 
-and pp_spine fmt sp =
-  match sp with
+(* we print from right to left because env are snoc lists *)
+and pp_env fmt env =
+  match env with
   | [] -> fprintf fmt ""
-  | [Value(v)] -> fprintf fmt "%a" pp_value v
-  | Value(v) :: sp -> fprintf fmt "%a, %a" pp_spine sp pp_value v
-  | [Clo({binds = n; body = t; env = e})] ->
-    fprintf fmt "<%a|%s.%a>" pp_spine e (string_of_int n) T.pp_term t
-  | Clo({binds = n; body = t; env = e}) :: sp ->
-    fprintf fmt "%a, <%a|%s.%a>" pp_spine sp pp_spine e (string_of_int n) T.pp_term t
+  | [Val(v)] -> fprintf fmt "%a" pp_value v
+  | Val(v) :: env -> fprintf fmt "%a, %a" pp_env env pp_value v
+  | [Clo({binds = n; body = t; env = env'})] ->
+    fprintf fmt "<%a|%s.%a>" pp_env env' (string_of_int n) T.pp_term t
+  | Clo({binds = n; body = t; env = env'}) :: env ->
+    fprintf fmt "%a, <%a|%s.%a>" pp_env env pp_env env' (string_of_int n) T.pp_term t
 
 
+let pp_vty fmt vty =
+  match vty with
+  | Star -> fprintf fmt "*"
+  | Val(v) -> pp_value fmt v
+
+let rec pp_vctx fmt vctx =
+  match vctx with
+  | [] -> fprintf fmt ""
+  | [(_, vty)] -> pp_vty fmt vty
+  | (_, vty) :: vctx -> fprintf fmt "%a, %a" pp_vctx vctx pp_vty vty
 
 
 
