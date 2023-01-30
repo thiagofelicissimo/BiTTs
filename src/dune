@@ -1,2 +1,12 @@
+(ocamllex
+ (modules lexer))
+
+(menhir
+ (modules parser)
+ (flags
+  (--explain)))
+
+
+
 (library
  (name lib))

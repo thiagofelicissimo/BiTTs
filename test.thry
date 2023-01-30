@@ -1,0 +1,13 @@
+
+
+rule app+ {A : Type} {B : (_ : A) Type} (t : Pi(A, \x. B(x)))+ (u : A)- : B(u);
+
+rule abs- {A : Type} {B : (_ : A) Type} (t : (x : A) B(x))- : Pi(A, \x. B(x));
+
+rew app(abs(\x. $t(x)), $u) -> $t($u);
+
+let test := d(\x y. x(y));
+
+let name : ty := tm;
+
+let name := tm;
