@@ -1,5 +1,0 @@
-let name := c(\x. x);
-let name2 : * := d(\x y. x);
-
-rule app+ {A : Type} : *;
-rule app+ {A : Type} {B : (_ : A) Type} (t : Pi(A, \x. B(x)))+ (u : A)- : B(u);

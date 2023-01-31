@@ -7,7 +7,7 @@
   let keyword_or_ident =
     let h = Hashtbl.create 17 in
     List.iter (fun (s, k) -> Hashtbl.add h s k)
-      [   "rule", RULE;
+      [   "symbol", SYMBOL;
           "rew", REW;
           "let", LET;
           "type", TYPE;
@@ -36,7 +36,7 @@ rule token = parse
   | ":" { COLON }
   | "." { DOT }
   | "," { COMMA }
-  | "->" { ARROW }
+  | "-->" { REDUCES }
   | ":=" { DEF }
   | "*" { STAR }
   | "+" { PLUS }

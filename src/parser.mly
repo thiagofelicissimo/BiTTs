@@ -5,9 +5,9 @@
 
 %}
 %token EOF
-%token RULE REW LET TYPE EVAL
+%token SYMBOL REW LET TYPE EVAL
 %token LPAR RPAR RPAR_POS RPAR_NEG LBRACK RBRACK
-%token COLON DOT COMMA ARROW DEF STAR PLUS MINUS
+%token COLON DOT COMMA REDUCES DEF STAR PLUS MINUS
 %token <string> IDENT
 
 %start program
@@ -41,9 +41,11 @@ ctx:
 
 prem:
   | LPAR id=IDENT COLON ctx=ctx ty=ty RPAR_POS { (Pos, id, ctx, ty) }
+  | LPAR id=IDENT COLON ctx=ctx ty=ty RPAR { (Neg, id, ctx, ty) }
   | LPAR id=IDENT COLON ctx=ctx ty=ty RPAR_NEG { (Neg, id, ctx, ty) }
   | LBRACK id=IDENT COLON ctx=ctx ty=ty RBRACK { (Ersd, id, ctx, ty) }
   | LPAR id=IDENT COLON ty=ty RPAR_POS { (Pos, id, [], ty) }
+  | LPAR id=IDENT COLON ty=ty RPAR { (Neg, id, [], ty) }
   | LPAR id=IDENT COLON ty=ty RPAR_NEG { (Neg, id, [], ty) }
   | LBRACK id=IDENT COLON ty=ty RBRACK { (Ersd, id, [], ty) }
 
@@ -52,9 +54,11 @@ pol:
   | MINUS { Neg }
 
 entry:
-  | RULE pol=pol id=IDENT prems=list(prem) COLON ty=ty
+  | SYMBOL pol=pol id=IDENT prems=list(prem) COLON ty=ty
     { Rule(id, pol, List.rev prems, ty) }
-  | REW lhs=term ARROW rhs=term
+  | SYMBOL id=IDENT prems=list(prem) COLON ty=ty
+    { Rule(id, Pos, List.rev prems, ty) }
+  | REW lhs=term REDUCES rhs=term
     { Rew(lhs, rhs) }
   | LET id=IDENT COLON ty=ty DEF tm=term
     { Let(id, Some(ty), tm) }

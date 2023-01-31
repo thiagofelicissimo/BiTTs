@@ -1,0 +1,146 @@
+
+
+(* we can declare a symbol along with a typing rule associated to it. a symbol comes
+   with a name, a list of premises and a type.
+
+   it also comes with a mode annotation (+ or -). + indicate that the symbol
+   can be used both in infer and check mode, whereas - indicates that the symbol can
+   only be used in check mode.
+
+   premises also have mode anotations: a - premise indicates the associated argument
+   will be typed in check mode, whereas for + it is typed in infer mode *)
+
+(* we start by declaring a (positive) symbol Pi, whose arguments are negative *)
+symbol+ Pi (A : Type)- (B : (x : A) Type)- : Type
+
+(* here we declare abs as negative. because we can recover A and B from it type
+   we can have A and B as erased, by puting them around {} *)
+symbol- abs {A : Type} {B : (_ : A) Type} (t : (x : A) B(x))- : Pi(A, x. B(x))
+
+(* in the following symbol, we omit the polarity annotations of the symbol and the
+   fourth premise. the default polarity of a symbol is positive, whereas the
+   default polarity of a premise is negative *)
+symbol app {A : Type} {B : (_ : A) Type} (t : Pi(A, x. B(x)))+ (u : A) : B(u)
+
+rew app(abs(x. $t(x)), $u) --> $t($u)
+
+(* we pose an unspecified type *)
+symbol T : Type
+
+(* we support definitions with a let syntax. for instance, the following term
+   of type (T -> T) -> T -> T is the church numeral 1 *)
+let church1 : Pi(Pi(T, _. T), _. Pi(T, _. T)) := abs(f. abs(x. app(f, x)))
+
+(* when a term is inferable, we can omit the anotation in the let *)
+let church1_id := app(church1, abs(x.x))
+
+(* we can also query the type using the following command *)
+type app(church1, abs(x.x))
+
+(* and we can reduce it using eval *)
+eval app(church1, abs(x.x))
+
+(* the following raises NotInferable: because we've chosen to not annotate lambdas,
+   we cannot infer them *)
+(* let app_T := abs(f. abs(x. app(f, x))) *)
+
+(* moreover, we cannot have beta redexes in terms. indeed, the first (non-erased)
+   argument of app is positive, and thus needs to synthetize a type. but because
+   abs is a negative constant, it can only be used in check mode. hence, the
+   following does not type-check *)
+(* let test : Pi(T, _. T) := abs(x. app(abs(y.y), x)) *)
+
+(* but if we want we can chose to instead have anotatted lambdas *)
+symbol Pi2 (A : Type) (B : (x : A) Type) : Type
+symbol app2 {A : Type} {B : (_ : A) Type} (t : Pi2(A, x. B(x)))+ (u : A)- : B(u)
+
+(* by having the A in the syntax, we can now declare the lambda as positive and infer it *)
+symbol abs2 (A : Type) {B : (_ : A) Type} (t : (x : A) B(x))+ : Pi2(A, x. B(x))
+
+rew app2(abs2($T, x. $t(x)), $u) --> $t($u)
+
+(* now we can ommit the type in the let *)
+let church1_ := abs2(Pi2(T, _. T), f. abs2(T, x. app2(f, x)))
+type church1_
+
+(* and we can also have beta-redexes in terms *)
+let test : Pi2(T, _. T) := abs2(T, x. app2(abs2(T, y.y), x))
+
+(* let us now define the natural numbers *)
+symbol Nat : Type
+symbol zero : Nat
+symbol succ (_ : Nat) : Nat
+
+symbol+ ind_Nat (P : (_ : Nat) Type)-
+              (p0 : P(zero))-
+              (ps : (n : Nat, pn : P(n)) P(succ(n)))-
+              (n : Nat)-
+              (* ------------ *)
+              : P(n)
+rew ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), zero) --> $p0
+rew ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), succ($n)) -->
+    $ps($n, ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), $n))
+
+
+let plus : Pi(Nat, _. Pi(Nat, _. Nat)) := abs(x. abs(y. ind_Nat(_. Nat, x, _ n. succ(n), y)))
+
+let 1 := succ(zero)
+let 2 := succ(succ(zero))
+let 3 := succ(succ(succ(zero)))
+
+(* 3 + 3 *)
+let 6 := app(app(plus, 3), 3)
+eval 6
+
+let times : Pi(Nat, _. Pi(Nat, _. Nat)) :=
+    abs(x. abs(y. ind_Nat(_. Nat, zero, _ n. app(app(plus, n), x), y)))
+
+(* 3 * 3 *)
+let 9 := app(app(times, 3), 3)
+
+eval 9
+
+let fact : Pi(Nat, _. Nat) := abs(x. ind_Nat(_. Nat, succ(zero), n m. app(app(times, succ(n)), m), x))
+
+type app(fact, 3)
+eval app(fact, 3)
+
+(* let us now define lists *)
+(* note that constructors are defined as negative, which allows us to ommit
+   the A in the syntax *)
+symbol List (A : Type) : Type
+symbol- nil {A : Type} : List(A)
+symbol- cons {A : Type} (a : A) (l : List(A)) : List(A)
+
+let nil_nat : List(Nat) := nil
+let 321 : List(Nat) := cons(3, cons(2, cons(1, nil)))
+
+symbol ind_List {A : Type}
+              (l : List(A))+
+              (P : (_ : List(A)) Type)
+              (l_nil : P(nil))
+              (l_cons : (a : A, l : List(A), pl : P(l)) P(cons(a, l)))
+              : P(l)
+
+rew ind_List(nil, l. $P(l), $p_nil, a l pl. $p_cons(a, l, pl)) --> $p_nil
+rew ind_List(cons($a, $l), l. $P(l), $p_nil, a l pl. $p_cons(a, l, pl)) -->
+    $p_cons($a, $l, ind_List($l, l. $P(l), $p_nil, a l pl. $p_cons(a, l, pl)))
+
+
+let hd : Pi(Type, A. Pi(A, _. Pi(List(A), _. A)))
+    := abs(A. abs(a. abs(l. ind_List(l, _. A, a, x l2 pl. x))))
+
+let tl : Pi(Type, A. Pi(List(A), _. List(A)))
+    := abs(A. abs(l. ind_List(l, _. List(A), nil, x l2 pl. l2)))
+
+
+eval app(app(app(hd, Nat), zero), 321)
+eval app(app(tl, Nat), 321)
+
+
+(* (A : Type) -> (B : Type) -> (A -> B) -> List A -> List B *)
+let map : Pi(Type, A. Pi(Type, B. Pi(Pi(A, _. B), _. Pi(List(A), _. List(B)))))
+    := abs(A. abs(B. abs(f. abs(l. ind_List(l, _. List(B), nil, a l2 fl2. cons(app(f, a), fl2))))))
+
+let 432 := app(app(app(app(map, Nat), Nat), abs(x. succ(x))), 321)
+eval 432

@@ -2,6 +2,10 @@ open Term
 open Value
 open Eval
 
+let remove_last_elems (k : int) l =
+  let rec remove_fist_elems k l =
+    if k = 0 then l else remove_fist_elems (k - 1) @@ List.tl l in
+  l |> List.rev |> remove_fist_elems k |> List.rev
 
 let remove_erased (prems : prem list) : prem list * int =
   let rec removed_erased' (prems : prem list) k =
@@ -20,8 +24,10 @@ let lookup_ty (gamma : vctx) (n : int) : vty =
 
 exception NotInferable
 
+let typing_err_mes = false
+
 let rec infer (gamma : vctx) (tm : term) : vty =
-  (*  Format.printf "%a |- %a => ?@." pp_vctx gamma pp_term tm; *)
+  if typing_err_mes then Format.printf "%a |- %a => ?@." pp_vctx gamma pp_term tm;
   match tm.head with
   | Ix(n) -> lookup_ty gamma n
   | Symb(str) ->
@@ -34,7 +40,7 @@ let rec infer (gamma : vctx) (tm : term) : vty =
       | Ersd -> assert false (* signatures should not contain erased rules *) end
 
 and check (gamma : vctx) (tm : term) (vty : vty) : unit =
-  (*Format.printf "%a |- %a <= %a@." pp_vctx gamma pp_term tm pp_vty vty; *)
+  if typing_err_mes then Format.printf "%a |- %a <= %a@." pp_vctx gamma pp_term tm pp_vty vty;
   match tm.head with
   | Ix(_) ->
     let vty' = infer gamma tm in equal_vty vty vty' (List.length gamma)
@@ -46,12 +52,12 @@ and check (gamma : vctx) (tm : term) (vty : vty) : unit =
       | Ersd -> assert false
       | Neg ->
         let prevals = match_ty rule.ty vty in
-        let prems = Common.remove_last_elems (List.length prevals) rule.prems in
+        let prems = remove_last_elems (List.length prevals) rule.prems in
         ignore @@ type_spine gamma prevals prems tm.spine end
 
 and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : env =
-  (*Format.printf "%a | %a |- %a ; %a ~~> ?@."
-    pp_vctx gamma pp_prems prems pp_env prevals pp_spine e; *)
+  if typing_err_mes then Format.printf "%a | %a |- %a ; %a ~~> ?@."
+    pp_vctx gamma pp_prems prems pp_env prevals pp_spine e;
   match prems, e with
   | [], [] -> prevals
 

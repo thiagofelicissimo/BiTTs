@@ -30,6 +30,8 @@ type vty =
 
 type vctx = (value * vty) list
 
+(* PRETTY PRINTING *)
+
 let pp_vhead fmt hd =
   match hd with
   | Symb(str) -> fprintf fmt "%s" str
@@ -62,20 +64,3 @@ let rec pp_vctx fmt vctx =
   | [] -> fprintf fmt ""
   | [(_, vty)] -> pp_vty fmt vty
   | (_, vty) :: vctx -> fprintf fmt "%a, %a" pp_vctx vctx pp_vty vty
-
-
-
-(*
-type aty =
-  | Star
-  | Aty of term
-
-type mode = Pos | Neg | Ersd
-
-type ty =
-  {ctx : ctx;
-   codom : ty}
-and ctx = (ty * mode) list
-
-type signature = string -> ty
-*)

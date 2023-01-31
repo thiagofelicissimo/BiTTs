@@ -54,6 +54,7 @@ module SignTbl = Map.Make(String)
 type sign = rule SignTbl.t
 let sign : sign ref = ref SignTbl.empty
 
+(* PRETTY PRINTING *)
 
 let pp_head fmt hd =
   match hd with

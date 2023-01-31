@@ -28,22 +28,6 @@ type entry =
   | Type of term
   | Eval of term
 
-(*
-type rule =
-  {
-    name : string;
-    prems : prem list;
-    mode : mode;
-    ty : ty
-  }
-
-type rew_rule =
-  {
-    lhs : term;
-    rhs : term
-  }
-*)
-
 (* SCOPING *)
 
 let get_db scope name =
@@ -106,7 +90,6 @@ let scope_rule mode prems ty : T.rule =
     T.ty = scope_ty (scope_of_prems prems) ty
   }
 
-
 (* scopes spine x1 .. xk *)
 let scope_patt_spine scope (e : spine) : T.spine =
   List.map begin fun {body = body; scope = scope'} ->
@@ -135,18 +118,6 @@ let scope_rew lhs rhs =
   let head_symb = match lhs.head with | Symb(str) -> str | _ -> failwith "not a valid lhs" in
   let rhs = scope_tm rew_metavars rhs in
   head_symb, {T.lhs_spine =  lhs.spine; T.rhs = rhs}
-
-(*
-let run scope entries =
-  match entries with
-  | [] -> ()
-  | Rule(name, mode, prems, ty) :: entries ->
-    let rule = scope_rule scope (name, mode, prems, ty) in
-    Ty.sign := T.SignTbl.add name rule !Ty.sign
-  | _ -> raise Todo*)
-
-
-
 
 (* PRETTY PRINTING *)
 
@@ -202,11 +173,11 @@ let pp_entry fmt entry =
   match entry with
   | Let(name, None, tm) -> fprintf fmt "let %s := %a@." name pp_term tm
   | Let(name, Some ty, tm) -> fprintf fmt "let %s : %a := %a@." name pp_ty ty pp_term tm
-  | Rew(lhs, rhs) -> fprintf fmt "rew %a -> %a@." pp_term lhs pp_term rhs
+  | Rew(lhs, rhs) -> fprintf fmt "rew %a --> %a@." pp_term lhs pp_term rhs
   | Rule(name, mode, [], ty) ->
-    fprintf fmt "rule%a %s : %a@." pp_pol mode name pp_ty ty
+    fprintf fmt "symbol%a %s : %a@." pp_pol mode name pp_ty ty
   | Rule(name, mode, prems, ty) ->
-    fprintf fmt "rule%a %s %a : %a@." pp_pol mode name pp_prems prems pp_ty ty
+    fprintf fmt "symbol%a %s %a : %a@." pp_pol mode name pp_prems prems pp_ty ty
   | Type(tm) -> fprintf fmt "type %a@."pp_term tm
   | Eval(tm) -> fprintf fmt "eval %a@."pp_term tm
 

@@ -6,7 +6,7 @@
  (flags
   (--explain)))
 
-
-
-(library
- (name lib))
+(executable
+ (package complf)
+ (name complf)
+ (public_name complf))
