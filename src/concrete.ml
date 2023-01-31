@@ -1,6 +1,6 @@
 open Format
 module T = Term
-
+module Ty = Typing
 
 type term = { head : string; spine : spine }
 
@@ -25,7 +25,24 @@ type entry =
   | Let of string * ty option * term
   | Rule of string * mode * prem list * ty
   | Rew of term * term
+  | Type of term
+  | Eval of term
 
+(*
+type rule =
+  {
+    name : string;
+    prems : prem list;
+    mode : mode;
+    ty : ty
+  }
+
+type rew_rule =
+  {
+    lhs : term;
+    rhs : term
+  }
+*)
 
 (* SCOPING *)
 
@@ -82,13 +99,51 @@ let rec scope_prems scope (prems : prem list) : T.prem list =
     let prems' = scope_prems scope prems in
     {T.mode = mode_to_mode mode; T.boundary = ty'; T.ctx = ctx'} :: prems'
 
-let scope_rule scope (string, mode, prems, ty) : T.rule =
+let scope_rule mode prems ty : T.rule =
   {
-    T.prems = scope_prems scope prems;
+    T.prems = scope_prems [] prems;
     T.mode = mode_to_mode mode;
-    T.ty = scope_ty (scope_of_prems prems @ scope) ty
+    T.ty = scope_ty (scope_of_prems prems) ty
   }
 
+
+(* scopes spine x1 .. xk *)
+let scope_patt_spine scope (e : spine) : T.spine =
+  List.map begin fun {body = body; scope = scope'} ->
+    match get_db scope body.head with
+    | Some n when scope' = [] && body.spine = [] ->
+      {T.body = {T.head = T.Ix(n); T.spine = []}; T.binds = 0}
+    | _ -> failwith "not a valid lhs" end e
+
+let rec scope_lhs scope k (tm : term) : T.term * string list =
+  if tm.head.[0] = '$'
+  then {T.head = T.Ix(List.length scope + k); T.spine = scope_patt_spine scope tm.spine}, [tm.head]
+  else
+    let sp, rew_metavars = scope_lhs_spine scope k tm.spine in
+    {T.head = T.Symb(tm.head); T.spine = sp}, rew_metavars
+
+and scope_lhs_spine (scope : string list) (k : int) (e : spine) : T.spine * string list =
+  match e with
+  | [] -> [], []
+  | arg :: e ->
+    let tm, rew_metavars = scope_lhs (arg.scope @ scope) k arg.body in
+    let e, rew_metavars' = scope_lhs_spine scope (k + List.length rew_metavars) e in
+    {T.body = tm; T.binds = List.length arg.scope} :: e, rew_metavars @ rew_metavars'
+
+let scope_rew lhs rhs =
+  let lhs, rew_metavars = scope_lhs [] 0 lhs in
+  let head_symb = match lhs.head with | Symb(str) -> str | _ -> failwith "not a valid lhs" in
+  let rhs = scope_tm rew_metavars rhs in
+  head_symb, {T.lhs_spine =  lhs.spine; T.rhs = rhs}
+
+(*
+let run scope entries =
+  match entries with
+  | [] -> ()
+  | Rule(name, mode, prems, ty) :: entries ->
+    let rule = scope_rule scope (name, mode, prems, ty) in
+    Ty.sign := T.SignTbl.add name rule !Ty.sign
+  | _ -> raise Todo*)
 
 
 
@@ -113,7 +168,7 @@ and pp_spine fmt e =
 
 and pp_arg fmt arg =
   if arg.scope = [] then pp_term fmt arg.body
-  else fprintf fmt "\\%a. %a" pp_binds arg.scope pp_term arg.body
+  else fprintf fmt "%a. %a" pp_binds arg.scope pp_term arg.body
 
 let pp_ty fmt ty =
   match ty with
@@ -145,10 +200,14 @@ let rec pp_prems fmt (prems : prem list) =
 
 let pp_entry fmt entry =
   match entry with
-  | Let(name, None, tm) -> fprintf fmt "let %s := %a;@." name pp_term tm
-  | Let(name, Some ty, tm) -> fprintf fmt "let %s : %a := %a;@." name pp_ty ty pp_term tm
-  | Rew(lhs, rhs) -> fprintf fmt "rew %a -> %a;@." pp_term lhs pp_term rhs
+  | Let(name, None, tm) -> fprintf fmt "let %s := %a@." name pp_term tm
+  | Let(name, Some ty, tm) -> fprintf fmt "let %s : %a := %a@." name pp_ty ty pp_term tm
+  | Rew(lhs, rhs) -> fprintf fmt "rew %a -> %a@." pp_term lhs pp_term rhs
+  | Rule(name, mode, [], ty) ->
+    fprintf fmt "rule%a %s : %a@." pp_pol mode name pp_ty ty
   | Rule(name, mode, prems, ty) ->
-    fprintf fmt "rule %s%a %a : %a;@." name pp_pol mode pp_prems prems pp_ty ty
+    fprintf fmt "rule%a %s %a : %a@." pp_pol mode name pp_prems prems pp_ty ty
+  | Type(tm) -> fprintf fmt "type %a@."pp_term tm
+  | Eval(tm) -> fprintf fmt "eval %a@."pp_term tm
 
 let pp_prog fmt prog = List.iter (fun x -> pp_entry fmt x) prog

@@ -26,6 +26,7 @@ type rew_rule =
 
 module RewTbl = Map.Make(String)
 type rew_map = (rew_rule list) RewTbl.t
+let rew_map : rew_map ref = ref RewTbl.empty
 
 type ty =
   | Star
@@ -51,6 +52,8 @@ type rule =
 
 module SignTbl = Map.Make(String)
 type sign = rule SignTbl.t
+let sign : sign ref = ref SignTbl.empty
+
 
 let pp_head fmt hd =
   match hd with

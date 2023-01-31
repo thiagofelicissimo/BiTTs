@@ -9,7 +9,9 @@
     List.iter (fun (s, k) -> Hashtbl.add h s k)
       [   "rule", RULE;
           "rew", REW;
-          "let", LET
+          "let", LET;
+          "type", TYPE;
+          "eval", EVAL
       ] ;
     fun s ->
       try  Hashtbl.find h s
@@ -32,10 +34,8 @@ rule token = parse
   | "{"  { LBRACK }
   | "}"  { RBRACK }
   | ":" { COLON }
-  | ";" { SEMICOLON }
   | "." { DOT }
   | "," { COMMA }
-  | "\\" { BACKSLASH }
   | "->" { ARROW }
   | ":=" { DEF }
   | "*" { STAR }

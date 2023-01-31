@@ -4,8 +4,6 @@ open Value
 
 exception Todo
 
-let rew_map : rew_map ref = ref RewTbl.empty
-
 exception MatchUnderLambda
 exception LenghtMismatch
 exception HeadMismatch

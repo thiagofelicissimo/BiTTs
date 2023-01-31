@@ -1,13 +1,36 @@
 
 
-rule app+ {A : Type} {B : (_ : A) Type} (t : Pi(A, \x. B(x)))+ (u : A)- : B(u);
+rule+ app {A : Type} {B : (_ : A) Type} (t : Pi(A, x. B(x)))+ (u : A)- : B(u)
 
-rule abs- {A : Type} {B : (_ : A) Type} (t : (x : A) B(x))- : Pi(A, \x. B(x));
+rule- abs {A : Type} {B : (_ : A) Type} (t : (x : A) B(x))- : Pi(A, x. B(x))
 
-rew app(abs(\x. $t(x)), $u) -> $t($u);
+rew app(abs(x. $t(x)), $u) -> $t($u)
 
-let test := d(\x y. x(y));
+rule+ ind_nat (P : (_ : Nat) Type)-
+              (p0 : P(zero))-
+              (ps : (n : Nat, pn : P(n)) P(succ(n)))-
+              (n : Nat)-
+              (* ------------ *)
+              : P(n)
 
-let name : ty := tm;
+rule+ nat : Type
 
-let name := tm;
+rule+ zero : nat
+rule+ succ (_ : nat)- : nat
+
+rule+ plus (_ : nat)- (_ : nat)- : nat
+rew plus($n, succ($m)) -> succ(plus($n, $m))
+rew plus($n, zero) -> $n
+
+
+let id_nat : Pi(nat, x. nat) := abs(x. x)
+
+let app_nat : Pi(Pi(nat, _. nat), _. Pi(nat, _. nat)) := abs(f. abs(x. app(f, x)))
+
+type app(app(app_nat, id_nat), zero)
+
+let app_id_zero := app(app(app_nat, id_nat), zero)
+
+eval app_id_zero
+
+eval plus(succ(zero), succ(succ(zero)))

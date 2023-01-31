@@ -4,6 +4,8 @@ open Eval
 open Value
 open Typing
 
+(*
+
 let vcst (str : string) : enve = Val ({head = Symb (str); env = []})
 
 let cst (str : string) : term =
@@ -391,3 +393,6 @@ let _ =
 
 let _ =
   check [] (mk_vec (plus (succ zero) (succ zero))) @@ eval_ty [] @@ T.Term(vec (succ (succ zero)))
+
+
+ * *)

@@ -3,8 +3,6 @@ open Value
 open Eval
 
 
-let sign : sign ref = ref SignTbl.empty
-
 let remove_erased (prems : prem list) : prem list * int =
   let rec removed_erased' (prems : prem list) k =
     match prems with
@@ -23,7 +21,7 @@ let lookup_ty (gamma : vctx) (n : int) : vty =
 exception NotInferable
 
 let rec infer (gamma : vctx) (tm : term) : vty =
-  Format.printf "%a |- %a => ?@." pp_vctx gamma pp_term tm;
+  (*  Format.printf "%a |- %a => ?@." pp_vctx gamma pp_term tm; *)
   match tm.head with
   | Ix(n) -> lookup_ty gamma n
   | Symb(str) ->
@@ -36,7 +34,7 @@ let rec infer (gamma : vctx) (tm : term) : vty =
       | Ersd -> assert false (* signatures should not contain erased rules *) end
 
 and check (gamma : vctx) (tm : term) (vty : vty) : unit =
-  Format.printf "%a |- %a <= %a@." pp_vctx gamma pp_term tm pp_vty vty;
+  (*Format.printf "%a |- %a <= %a@." pp_vctx gamma pp_term tm pp_vty vty; *)
   match tm.head with
   | Ix(_) ->
     let vty' = infer gamma tm in equal_vty vty vty' (List.length gamma)
@@ -52,8 +50,8 @@ and check (gamma : vctx) (tm : term) (vty : vty) : unit =
         ignore @@ type_spine gamma prevals prems tm.spine end
 
 and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : env =
-  Format.printf "%a | %a |- %a ; %a ~~> ?@."
-    pp_vctx gamma pp_prems prems pp_env prevals pp_spine e;
+  (*Format.printf "%a | %a |- %a ; %a ~~> ?@."
+    pp_vctx gamma pp_prems prems pp_env prevals pp_spine e; *)
   match prems, e with
   | [], [] -> prevals
 
