@@ -1,14 +1,16 @@
 
 
 (* we can declare a symbol along with a typing rule associated to it. a symbol comes
-   with a name, a list of premises and a type.
+   with a name, a list of premises and a type. a premise is given by a name,
+   a context, of the form (x1 : A1, .., xk : Ak), and a type.
 
-   it also comes with a mode annotation (+ or -). + indicate that the symbol
+   a symbol also comes with a mode annotation (+ or -). + indicate that the symbol
    can be used both in infer and check mode, whereas - indicates that the symbol can
    only be used in check mode.
 
    premises also have mode anotations: a - premise indicates the associated argument
-   will be typed in check mode, whereas for + it is typed in infer mode *)
+   will be typed in check mode, whereas for + it is typed in infer mode. therefore,
+   the term given for a positive premise is expected to be able to synthetize a type *)
 
 (* we start by declaring a (positive) symbol Pi, whose arguments are negative *)
 symbol+ Pi (A : Type)- (B : (x : A) Type)- : Type
@@ -24,14 +26,20 @@ symbol app {A : Type} {B : (_ : A) Type} (t : Pi(A, x. B(x)))+ (u : A) : B(u)
 
 rew app(abs(x. $t(x)), $u) --> $t($u)
 
-(* we pose an unspecified type *)
+(* note that the commands symbol and rew do not do any checking, it is completely
+   to the user to make sure that the symbols are well-typed and that rules are confluent
+   and preserve typing *)
+
+(* we pose an auxiliary unspecified type *)
 symbol T : Type
 
-(* we support definitions with a let syntax. for instance, the following term
-   of type (T -> T) -> T -> T is the church numeral 1 *)
+(* we can make definitions by using the following syntax. the corresponding term
+   is checked against the given type (which is thus assumed to be well-formed), and
+   then the name is added to the signature, along with an unfolding rewrite rule.
+   the following term of type (T -> T) -> T -> T is the church numeral 1 *)
 let church1 : Pi(Pi(T, _. T), _. Pi(T, _. T)) := abs(f. abs(x. app(f, x)))
 
-(* when a term is inferable, we can omit the anotation in the let *)
+(* when a term is inferable, we can omit the type in the let *)
 let church1_id := app(church1, abs(x.x))
 
 (* we can also query the type using the following command *)
@@ -50,7 +58,7 @@ eval app(church1, abs(x.x))
    following does not type-check *)
 (* let test : Pi(T, _. T) := abs(x. app(abs(y.y), x)) *)
 
-(* but if we want we can chose to instead have anotatted lambdas *)
+(* but if we want we can chose to instead have anotated lambdas *)
 symbol Pi2 (A : Type) (B : (x : A) Type) : Type
 symbol app2 {A : Type} {B : (_ : A) Type} (t : Pi2(A, x. B(x)))+ (u : A)- : B(u)
 
@@ -64,7 +72,7 @@ let church1_ := abs2(Pi2(T, _. T), f. abs2(T, x. app2(f, x)))
 type church1_
 
 (* and we can also have beta-redexes in terms *)
-let test : Pi2(T, _. T) := abs2(T, x. app2(abs2(T, y.y), x))
+type abs2(T, x. app2(abs2(T, y.y), x))
 
 (* let us now define the natural numbers *)
 symbol Nat : Type
