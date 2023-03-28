@@ -152,3 +152,4 @@ let map : Pi(Type, A. Pi(Type, B. Pi(Pi(A, _. B), _. Pi(List(A), _. List(B)))))
 
 let 432 := app(app(app(app(map, Nat), Nat), abs(x. succ(x))), 321)
 eval 432
+

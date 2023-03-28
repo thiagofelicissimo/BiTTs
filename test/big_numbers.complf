@@ -1,0 +1,61 @@
+
+
+symbol+ Pi (A : Type)- (B : (x : A) Type)- : Type
+symbol- abs {A : Type} {B : (_ : A) Type} (t : (x : A) B(x))- : Pi(A, x. B(x))
+symbol app {A : Type} {B : (_ : A) Type} (t : Pi(A, x. B(x)))+ (u : A) : B(u)
+
+rew app(abs(x. $t(x)), $u) --> $t($u)
+
+
+(* let us now define the natural numbers *)
+symbol Nat : Type
+symbol zero : Nat
+symbol succ (_ : Nat) : Nat
+
+symbol+ ind_Nat (P : (_ : Nat) Type)-
+              (p0 : P(zero))-
+              (ps : (n : Nat, pn : P(n)) P(succ(n)))-
+              (n : Nat)-
+              (* ------------ *)
+              : P(n)
+
+rew ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), zero) --> $p0
+rew ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), succ($n)) -->
+    $ps($n, ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), $n))
+
+let plus : Pi(Nat, _. Pi(Nat, _. Nat)) := abs(x. abs(y. ind_Nat(_. Nat, x, _ n. succ(n), y)))
+
+let times : Pi(Nat, _. Pi(Nat, _. Nat)) :=
+    abs(x. abs(y. ind_Nat(_. Nat, zero, _ n. app(app(plus, n), x), y)))
+
+let fact : Pi(Nat, _. Nat) := abs(x. ind_Nat(_. Nat, succ(zero), n m. app(app(times, succ(n)), m), x))
+
+let 1 := succ(zero)
+let 2 := succ(succ(zero))
+let 3 := succ(succ(succ(zero)))
+
+let 6 := app(app(plus, 3), 3)
+
+let 8 := succ(succ(6))
+
+(* fact 8 = 40320 *)
+eval app(fact, 8) (* in my machine, takes around 1.5s *)
+
+
+
+let 10 := succ(succ(succ(succ(succ(succ(succ(succ(succ(succ(zero))))))))))
+
+eval app(app(times, 10), 10) (* very fast *)
+
+
+let 30 := app(app(times, 3), 10)
+
+let 900 := app(app(times, 30), 30)
+
+(* eval 900 *)
+
+eval app(app(times, 30), 900)
+
+let 9000 := app(app(times, 10), 900)
+
+eval 9000
