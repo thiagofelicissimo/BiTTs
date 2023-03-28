@@ -5,3 +5,6 @@ all:
 
 test:
 	dune exec --profile release -- complf test/test.complf
+
+test-big-numbers:
+	dune exec --profile release -- complf test/big_numbers.complf

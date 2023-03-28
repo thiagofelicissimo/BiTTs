@@ -32,6 +32,7 @@ scope:
 ty:
   | STAR { Star }
   | tm=term { Term(tm) }
+  | id=IDENT t=term { Term({head = id; spine = [{scope = []; body = t}]}) }
 
 ctx_entry:
   | id=IDENT COLON ty=ty { (id, ty) }

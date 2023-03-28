@@ -1,61 +1,56 @@
+symbol Ty : *
+
+symbol Tm (A : Ty) : *
 
 
-symbol+ Pi (A : Type)- (B : (x : A) Type)- : Type
-symbol- abs {A : Type} {B : (_ : A) Type} (t : (x : A) B(x))- : Pi(A, x. B(x))
-symbol app {A : Type} {B : (_ : A) Type} (t : Pi(A, x. B(x)))+ (u : A) : B(u)
+symbol+ Π (A : Ty)- (B : (x : Tm A) Ty)- : Ty
+symbol- λ {A : Ty} {B : (_ : Tm A) Ty} (t : (x : Tm A) Tm B(x))- : Tm Π(A, x. B(x))
+symbol ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A) : Tm B(u)
+rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 
-rew app(abs(x. $t(x)), $u) --> $t($u)
+symbol ℕ : Ty
+symbol 0 : Tm ℕ
+symbol S (_ : Tm ℕ) : Tm ℕ
 
-
-(* let us now define the natural numbers *)
-symbol Nat : Type
-symbol zero : Nat
-symbol succ (_ : Nat) : Nat
-
-symbol+ ind_Nat (P : (_ : Nat) Type)-
-              (p0 : P(zero))-
-              (ps : (n : Nat, pn : P(n)) P(succ(n)))-
-              (n : Nat)-
+symbol+ ℕ_ind (P : (_ : Tm ℕ) Ty)-
+              (p0 : Tm P(0))-
+              (ps : (n : Tm ℕ, pn : Tm P(n)) Tm P(S(n)))-
+              (n : Tm ℕ)-
               (* ------------ *)
-              : P(n)
+              : Tm P(n)
+rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), 0) --> $p0
+rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), S($n)) -->
+    $ps($n, ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), $n))
 
-rew ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), zero) --> $p0
-rew ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), succ($n)) -->
-    $ps($n, ind_Nat(x. $P(x), $p0, n pn. $ps(n, pn), $n))
 
-let plus : Pi(Nat, _. Pi(Nat, _. Nat)) := abs(x. abs(y. ind_Nat(_. Nat, x, _ n. succ(n), y)))
+let ＋ : Tm Π(ℕ, _. Π(ℕ, _. ℕ)) := λ(x. λ(y. ℕ_ind(_. ℕ, x, _ n. S(n), y)))
+let × : Tm Π(ℕ, _. Π(ℕ, _. ℕ)) := λ(x. λ(y. ℕ_ind(_. ℕ, 0, _ n. ﹫(﹫(＋, n), x), y)))
+let fact : Tm Π(ℕ, _. ℕ) := λ(x. ℕ_ind(_. ℕ, S(0), n m. ﹫(﹫(×, S(n)), m), x))
 
-let times : Pi(Nat, _. Pi(Nat, _. Nat)) :=
-    abs(x. abs(y. ind_Nat(_. Nat, zero, _ n. app(app(plus, n), x), y)))
-
-let fact : Pi(Nat, _. Nat) := abs(x. ind_Nat(_. Nat, succ(zero), n m. app(app(times, succ(n)), m), x))
-
-let 1 := succ(zero)
-let 2 := succ(succ(zero))
-let 3 := succ(succ(succ(zero)))
-
-let 6 := app(app(plus, 3), 3)
-
-let 8 := succ(succ(6))
+let 1 := S(0)
+let 2 := S(S(0))
+let 3 := S(S(S(0)))
+let 6 := ﹫(﹫(＋, 3), 3)
+let 8 := S(S(6))
 
 (* fact 8 = 40320 *)
-eval app(fact, 8) (* in my machine, takes around 1.5s *)
+eval ﹫(fact, 8) (* in my machine, takes around 1.5s *)
 
 
 
-let 10 := succ(succ(succ(succ(succ(succ(succ(succ(succ(succ(zero))))))))))
+let 10 := S(S(S(S(S(S(S(S(S(S(0))))))))))
 
-eval app(app(times, 10), 10) (* very fast *)
+eval ﹫(﹫(×, 10), 10) (* very fast *)
 
 
-let 30 := app(app(times, 3), 10)
+let 30 := ﹫(﹫(×, 3), 10)
 
-let 900 := app(app(times, 30), 30)
+let 900 := ﹫(﹫(×, 30), 30)
 
 (* eval 900 *)
 
-eval app(app(times, 30), 900)
+eval ﹫(﹫(×, 30), 900)
 
-let 9000 := app(app(times, 10), 900)
+let 9000 := ﹫(﹫(×, 10), 900)
 
 eval 9000

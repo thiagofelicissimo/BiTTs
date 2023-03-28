@@ -55,6 +55,18 @@ and check (gamma : vctx) (tm : term) (vty : vty) : unit =
         let prems = remove_last_elems (List.length prevals) rule.prems in
         ignore @@ type_spine gamma prevals prems tm.spine end
 
+and check_type (gamma : vctx) (ty : ty) : unit =
+  if typing_err_mes then Format.printf "%a |- %a <=> * @." pp_vctx gamma pp_ty ty;
+  match ty with
+  | Star -> assert false
+  | Term(t) -> begin
+      match t.head with
+      | Ix(n) -> assert false
+      | Symb(str) ->
+        let rule = SignTbl.find str !sign in
+        assert (rule.ty = Star);
+        ignore @@ type_spine gamma [] rule.prems t.spine end
+
 and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : env =
   if typing_err_mes then Format.printf "%a | %a |- %a ; %a ~~> ?@."
     pp_vctx gamma pp_prems prems pp_env prevals pp_spine e;

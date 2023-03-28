@@ -33,6 +33,7 @@ let () =
       | Let(name, Some ty, tm) ->
         let tm = C.scope_tm [] tm in
         let ty = C.scope_ty [] ty in
+        Ty.check_type [] ty;
         let vty = E.eval_ty [] ty in
         Ty.check [] tm vty;
         T.sign := T.SignTbl.add name {T.prems = []; T.mode = T.Pos; T.ty = ty} !T.sign;
@@ -41,11 +42,11 @@ let () =
         let tm = C.scope_tm [] ctm in
         let vty = Ty.infer [] tm in
         let ty = E.read_back_ty 0 vty in
-        Format.printf "[type] %a : %a@." C.pp_term ctm T.pp_ty ty
+        Format.printf "[type] %a : %a@." T.pp_term tm T.pp_ty ty
       | Eval(ctm) ->
         let tm = C.scope_tm [] ctm in
         let vtm = E.eval_tm [] tm in
         let tm' = E.read_back_tm 0 vtm in
-        Format.printf "[eval] %a --> %a@." C.pp_term ctm T.pp_term tm'
+        Format.printf "[eval] %a -->* %a@." T.pp_term tm T.pp_term tm'
     end prog
   end !input_files
