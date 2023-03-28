@@ -2,7 +2,7 @@ module C = Concrete
 module T = Term
 module Ty = Typing
 module P = Parser
-module L = Lexer
+(* module L = Lexer *)
 module E = Eval
 
 
@@ -12,7 +12,8 @@ let () =
   let usage = "Usage: " ^ Sys.argv.(0) ^ " [FILE]..." in
   Arg.parse options (fun s -> input_files := s :: !input_files) usage;
   List.iter begin fun file ->
-    let prog = P.program L.token @@ Lexing.from_channel @@ open_in file in (*"test.thry"*)
+    let prog = Sedlexer.get_concrete_syntax file in
+    (*let prog = P.program L.token @@ Lexing.from_channel @@ open_in file in (*"test.thry"*) *)
     List.iter begin fun entry ->
       (*  Format.printf "%a" C.pp_entry entry;*)
       match entry with
