@@ -6,16 +6,36 @@ exception Todo
 
 exception MatchUnderLambda
 exception LenghtMismatch
+exception LenghtMismatch2
 exception HeadMismatch
 
 exception NoMatch
 exception Problem
 exception Matched of env * term
+exception NotEqual
+
+module MatchTbl = Map.Make(Int)
+type match_tbl = enve MatchTbl.t
+
+let empty_match_tbl = MatchTbl.empty
+
+let match_tbl_to_env match_tbl =
+  List.rev @@ MatchTbl.fold (fun _ enve env -> enve :: env) match_tbl []
+
+(* this function supposes that we only deal with 0-order variables *)
+let rec gen_fresh (depth : int) (n : int) : env =
+  let rec aux depth n acc =
+    if n = 0 then acc
+    else
+      let new_var = {head = Lvl(depth); env = []} in
+      aux (depth + 1) (n - 1) ((Val(new_var) : enve) :: acc) in
+  aux depth n []
+
 
 (* EVAL *)
 
 let rec eval_tm (env : env) (t : term) : value =
-  (* printf "%a |- %a@." V.pp_spine env T.pp_term t; *)
+  (*printf "%a |- %a@." pp_env env T.pp_term t;*)
   let env_sp = eval_sp env t.spine in
   match t.head with
   | Ix(n) ->
@@ -28,7 +48,8 @@ let rec eval_tm (env : env) (t : term) : value =
     List.iter
         begin fun rew_rule ->
           try
-            let new_env = match_sp rew_rule.lhs_spine env_sp in
+            let match_tbl = match_sp empty_match_tbl rew_rule.lhs_spine env_sp in
+            let new_env = match_tbl_to_env match_tbl in
             raise @@ Matched(new_env, rew_rule.rhs)
           with
           | Matched(new_env, rhs) -> raise @@ Matched(new_env, rhs)
@@ -54,50 +75,40 @@ and eval_arg (env : env) (arg : arg) : enve =
 
 (* MATCH *)
 
-and match_sp (sp : spine) (envsp : env) : env =
+and match_sp (match_tbl : match_tbl) (sp : spine) (envsp : env) : match_tbl =
   match sp, envsp with
-  | [], [] -> []
-  | arg :: sp, e :: envsp -> (match_arg arg e) @ match_sp sp envsp
-  | _ -> raise LenghtMismatch
+  | [], [] -> match_tbl
+  | arg :: sp, e :: envsp ->
+    let match_tbl = match_arg match_tbl arg e in
+    match_sp match_tbl sp envsp
+  | _ -> raise LenghtMismatch2
 
-and match_arg (arg : arg) (e : enve) : env =
+and match_arg (match_tbl : match_tbl) (arg : arg) (e : enve) : match_tbl =
   match arg, e with
-  | {binds = 0; body = t}, Val(v) -> match_val t v
+  | {binds = 0; body = t}, Val(v) -> match_val match_tbl t v
   | {binds = k; body = body}, Clo({binds = n}) when n = k ->
     begin match body.head with
-      | Ix(_) -> [e] (* we suppose it is of the right form, so don't need to check *)
+      (* we suppose the lhs is of the right form, so don't need to check
+       * that body.spine = x1 .. xk *)
+      | Ix(n) ->
+        begin match MatchTbl.find_opt (n-k) match_tbl with
+          | None -> MatchTbl.add (n-k) e match_tbl
+          | Some e' -> equal_enve e e' 0; match_tbl end
       | _ -> assert false end (* matching inside binder not supported *)
   | _ -> assert false
 
-and match_val (t : term) (v : value) : env =
+and match_val (match_tbl : match_tbl) (t : term) (v : value) : match_tbl =
   match t.head, v.head with
-  | Ix(_), _ -> [Val(v)]
-  | Symb(c), Symb(d) when c = d -> match_sp t.spine v.env
+  | Ix(n), _ ->
+    begin match MatchTbl.find_opt n match_tbl with
+      | None -> MatchTbl.add n (Val(v) : enve) match_tbl
+      | Some v' -> equal_enve (Val(v) : enve) v' 0; match_tbl end
+  | Symb(c), Symb(d) when c = d -> match_sp match_tbl t.spine v.env
   | _ -> raise HeadMismatch
-
-(* this function supposes that we only deal with 0-order variables *)
-let rec ext_env (env : env) (depth : int) (k : int) : env =
-  if k = 0 then env
-  else
-    let newvar = Lvl(depth) in
-    let new_entry : enve = Val({head = newvar; env = []}) in
-    ext_env (new_entry :: env) (depth + 1) (k - 1)
-
-
 
 (* EQUAL *)
 
-(* this function supposes that we only deal with 0-order variables *)
-let rec gen_fresh (depth : int) (n : int) : env =
-  let rec aux depth n acc =
-    if n = 0 then acc
-    else
-      let new_var = {head = Lvl(depth); env = []} in
-      aux (depth + 1) (n - 1) ((Val(new_var) : enve) :: acc) in
-  aux depth n []
-
-exception NotEqual
-let rec equal_val (v : value) (v' : value) (depth : int) : unit =
+and equal_val (v : value) (v' : value) (depth : int) : unit =
   match v.head, v'.head with
   | Symb(str1), Symb(str2) when str1 = str2 ->
     equal_env v.env v'.env depth
@@ -167,7 +178,7 @@ let eval_ty (env : env) (ty : ty) : vty =
 let match_ty (ty : ty) (vty : vty) : env =
   match ty, vty with
   | Star, Star -> []
-  | Term(t), Val(v) -> match_val t v
+  | Term(t), Val(v) -> match_tbl_to_env @@ match_val empty_match_tbl t v
   | _ -> raise NoMatch
 
 let equal_vty (vty : vty) (vty' : vty) (depth : int) : unit =

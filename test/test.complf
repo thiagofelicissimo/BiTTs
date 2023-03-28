@@ -119,6 +119,13 @@ let fact : Tm Π(ℕ, _. ℕ) := λ(x. ℕ_ind(_. ℕ, S(0), n m. ﹫(﹫(×, S(
 type ﹫(fact, 3)
 eval ﹫(fact, 3)
 
+(* a test of nonlinear matching *)
+symbol eqℕ (_ : Tm ℕ) (_ : Tm ℕ) : Tm ℕ
+rew eqℕ($t, $t) --> $t
+
+eval eqℕ(0, 1)
+eval eqℕ(﹫(fact, 3), 6)
+
 (* let us now define lists *)
 (* note that constructors are defined as negative, which allows us to ommit
    the A in the syntax *)
@@ -172,3 +179,39 @@ type pair
 
 eval π₂(pair)
 type π₂(pair)
+
+(* equality *)
+
+symbol Eq (A : Ty) (t : Tm A) (u : Tm A) : Ty
+symbol- refl {A : Ty} {t : Tm A} : Tm Eq(A, t, t)
+
+let pair2 : Tm Σ(ℕ, x. Eq(ℕ, x, x)) := mkΣ(6, refl)
+let pair3 : Tm Σ(ℕ, x. Eq(ℕ, ﹫(fact, 3), x)) := mkΣ(6, refl)
+
+symbol J {A : Ty} {a : Tm A} {b : Tm A} (t : Tm Eq(A, a, b))+
+       (P : (x : Tm A, y : Tm Eq(A, a, x)) Ty) (prefl : Tm P(a, refl)) : Tm P(b, t)
+
+rew J(refl, x y. $P(x, y), $prefl) --> $prefl
+
+(* universe *)
+
+symbol U : Ty
+symbol El (A : Tm U) : Ty
+
+symbol nat : Tm U
+rew El(nat) --> ℕ
+
+symbol π (a : Tm U) (b : (_ : Tm El(a)) Tm U) : Tm U
+rew El(π($a, x.$b(x))) --> Π(El($a), x. El($b(x)))
+
+(* type in type *)
+symbol u : Tm U
+rew El(u) --> U
+
+eval El(π(nat, _. u))
+
+
+
+let sym : Tm Π(U, a. Π(El(a), x. Π(El(a), y. Π(Eq(El(a), x, y), _. Eq(El(a), y, x)))))
+    :=  λ(a. λ(x. λ(y. λ(p. J(p, z q. Eq(El(a), z, x), refl)))))
+type ﹫(sym, nat)

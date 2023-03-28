@@ -90,33 +90,23 @@ let scope_rule mode prems ty : T.rule =
     T.ty = scope_ty (scope_of_prems prems) ty
   }
 
-(* scopes spine x1 .. xk *)
-let scope_patt_spine scope (e : spine) : T.spine =
-  List.map begin fun {body = body; scope = scope'} ->
-    match get_db scope body.head with
-    | Some n when scope' = [] && body.spine = [] ->
-      {T.body = {T.head = T.Ix(n); T.spine = []}; T.binds = 0}
-    | _ -> failwith "not a valid lhs" end e
-
-let rec scope_lhs scope k (tm : term) : T.term * string list =
+let rec genscope_lhs tm list : string list =
   if tm.head.[0] = '$'
-  then {T.head = T.Ix(List.length scope + k); T.spine = scope_patt_spine scope tm.spine}, [tm.head]
-  else
-    let sp, rew_metavars = scope_lhs_spine scope k tm.spine in
-    {T.head = T.Symb(tm.head); T.spine = sp}, rew_metavars
+  then begin if List.mem tm.head list then list else tm.head :: list end
+  else genscope_lhs_sp tm.spine list
 
-and scope_lhs_spine (scope : string list) (k : int) (e : spine) : T.spine * string list =
-  match e with
-  | [] -> [], []
-  | arg :: e ->
-    let tm, rew_metavars = scope_lhs (arg.scope @ scope) k arg.body in
-    let e, rew_metavars' = scope_lhs_spine scope (k + List.length rew_metavars) e in
-    {T.body = tm; T.binds = List.length arg.scope} :: e, rew_metavars @ rew_metavars'
+and genscope_lhs_sp sp list : string list =
+  match sp with
+  | [] -> list
+  | arg :: sp' ->
+    let list' = genscope_lhs arg.body list in
+    genscope_lhs_sp sp' list'
 
 let scope_rew lhs rhs =
-  let lhs, rew_metavars = scope_lhs [] 0 lhs in
+  let scope = List.rev @@ genscope_lhs lhs [] in
+  let lhs = scope_tm scope lhs in
+  let rhs = scope_tm scope rhs in
   let head_symb = match lhs.head with | Symb(str) -> str | _ -> failwith "not a valid lhs" in
-  let rhs = scope_tm rew_metavars rhs in
   head_symb, {T.lhs_spine =  lhs.spine; T.rhs = rhs}
 
 (* PRETTY PRINTING *)
