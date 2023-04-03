@@ -63,6 +63,42 @@ module SignTbl = Map.Make(String)
 type sign = symb SignTbl.t
 let sign : sign ref = ref SignTbl.empty
 
+(* PRETTY PRINTING WITH NAMES *)
+
+let ppn_head depth fmt hd =
+  match hd with
+  | Symb(str) -> fprintf fmt "%s" str
+  | Ix(n) -> fprintf fmt "x%s" (string_of_int (depth - n - 1))
+
+let rec ppn_binders depth fmt size =
+  if size = 0 then assert false
+  else if size = 1 then fprintf fmt "x%s" (string_of_int depth)
+  else fprintf fmt "%a x_%s" (ppn_binders (depth + 1)) (size - 1) (string_of_int depth)
+
+let rec ppn_term depth fmt t =
+  if t.spine = []
+  then ppn_head depth fmt t.head
+  else fprintf fmt "%a(%a)" (ppn_head depth) t.head (ppn_spine depth) t.spine
+
+(* we print from right to left because spines are snoc lists *)
+and ppn_spine depth fmt sp =
+  match sp with
+  | [] -> fprintf fmt ""
+  | [{binds = n; body = t}] ->
+    if n = 0
+    then fprintf fmt "%a" (ppn_term depth) t
+    else fprintf fmt "%a. %a" (ppn_binders depth) n (ppn_term (depth + n)) t
+  | {binds = n; body = t} :: sp ->
+    if n = 0
+    then fprintf fmt "%a, %a" (ppn_spine depth) sp (ppn_term depth) t
+    else fprintf fmt "%a, %a. %a" (ppn_spine depth) sp (ppn_binders depth) n (ppn_term (depth + n)) t
+
+let ppn_ty depth fmt ty =
+  if ty.ty_spine = []
+  then fprintf fmt "%s" ty.ty_cst
+  else fprintf fmt "%s(%a)" ty.ty_cst (ppn_spine depth) ty.ty_spine
+
+
 (* PRETTY PRINTING *)
 
 let pp_head fmt hd =

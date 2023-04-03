@@ -21,7 +21,9 @@
  (name complf)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends
+   ocaml
+   dune)
  (tags
   (topics "to describe" your project)))
 

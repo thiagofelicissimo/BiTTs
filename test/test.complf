@@ -235,5 +235,5 @@ let ac : Tm Π(U, a. Π(U, b. Π(Π(El(b), _. U), c.
             Π(Π(El(a), _. Σ(El(b), x. El(﹫(c, x)))), _.
             Σ(Π(El(a), _. El(b)), f. Π(El(a), x. El(﹫(c, ﹫(f, x)))))))))
     := λ(a. λ(b. λ(c. λ(ϕ. mkΣ(λ(x. π₁(﹫(ϕ, x))), λ(x. π₂(﹫(ϕ, x))))))))
-
+eval ac
 type ﹫(﹫(﹫(ac, nat), nat), λ(x. eq(nat, x, 0)))

@@ -10,7 +10,7 @@ let remove_last_elems (k : int) l =
 let remove_erased (prems : prem list) : prem list * int =
   let rec removed_erased' (prems : prem list) k =
     match prems with
-    | {mode = Ersd} :: prems -> removed_erased' prems (k + 1)
+    | {mode = Ersd; _} :: prems -> removed_erased' prems (k + 1)
     | _ -> prems, k in
   removed_erased' prems 0
 
@@ -23,6 +23,7 @@ let lookup_ty (gamma : vctx) (n : int) : vty =
   snd (List.nth gamma n)
 
 exception NotInferable
+exception TypingLenghtMismatch
 
 let typing_err_mes = false
 
@@ -47,7 +48,7 @@ let rec infer (gamma : vctx) (tm : term) : vty =
         let env = type_spine gamma [] symb.prems tm.spine in
         eval_ty env symb.ty
       | Neg -> raise NotInferable
-      | Ersd -> assert false (* signatures should not contain erased symbs *) end
+      | Ersd -> assert false (* signatures never contain erased symbs *) end
 
 and check (gamma : vctx) (tm : term) (vty : vty) : unit =
   if typing_err_mes then Format.printf "%a |- %a <= %a@." pp_vctx gamma pp_term tm pp_vty vty;
@@ -59,7 +60,7 @@ and check (gamma : vctx) (tm : term) (vty : vty) : unit =
     begin match symb.mode with
       | Pos ->
         let vty' = infer gamma tm in equal_vty vty vty' (List.length gamma)
-      | Ersd -> assert false
+      | Ersd -> assert false (* signatures never contain erased symbs *)
       | Neg ->
         let prevals = match_ty symb.ty vty in
         let prems = remove_last_elems (List.length prevals) symb.prems in
@@ -109,5 +110,4 @@ and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : 
     let enve = eval_arg (env_of_vctx gamma) arg in
     enve :: rho_e
 
-  | _ -> assert false
-
+  | _ -> raise TypingLenghtMismatch

@@ -1,6 +1,5 @@
 %{
 
-  open Lexing
   open Concrete
 
 %}
