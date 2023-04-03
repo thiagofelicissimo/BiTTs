@@ -30,9 +30,10 @@ scope:
   | l=nonempty_list(IDENT) { List.rev l }
 
 ty:
-  | STAR { Star }
-  | tm=term { Term(tm) }
-  | id=IDENT t=term { Term({head = id; spine = [{scope = []; body = t}]}) }
+  | id=IDENT { {ty_cst = id; ty_spine = []} }
+ (* special case for allowing to write Tm A and Prf P instead of Tm(A) and Prf(P)*)
+  | id=IDENT t=term { {ty_cst = id; ty_spine = [{scope = []; body = t}]} }
+  | id=IDENT LPAR e=spine RPAR { {ty_cst = id; ty_spine = e} }
 
 ctx_entry:
   | id=IDENT COLON ty=ty { (id, ty) }
@@ -56,9 +57,11 @@ pol:
 
 entry:
   | SYMBOL pol=pol id=IDENT prems=list(prem) COLON ty=ty
-    { Rule(id, pol, List.rev prems, ty) }
+    { Tm_symb(id, pol, List.rev prems, ty) }
   | SYMBOL id=IDENT prems=list(prem) COLON ty=ty
-    { Rule(id, Pos, List.rev prems, ty) }
+    { Tm_symb(id, Pos, List.rev prems, ty) }
+  | SYMBOL id=IDENT prems=list(prem) COLON STAR
+    { Ty_symb(id, prems)}
   | REW lhs=term REDUCES rhs=term
     { Rew(lhs, rhs) }
   | LET id=IDENT COLON ty=ty DEF tm=term

@@ -29,10 +29,12 @@ type rew_map = (rew_rule list) RewTbl.t
 let rew_map : rew_map ref = ref RewTbl.empty
 
 type ty =
-  | Star
-  | Term of term
+  {
+    ty_cst : string;
+    ty_spine : spine
+  }
 
-type ctx = ty list
+type ctx = ty list (* only types of order 0 *)
 
 type mode = Pos | Neg | Ersd
 
@@ -43,15 +45,22 @@ type prem =
     boundary : ty
   }
 
-type rule =
-  {
-    prems : prem list;
-    mode : mode;
-    ty : ty
-  }
+type tm_symb = {
+  prems : prem list;
+  mode : mode;
+  ty : ty
+}
+
+type ty_symb = {
+  prems : prem list
+}
+
+type symb =
+  | Tm_symb of tm_symb
+  | Ty_symb of ty_symb
 
 module SignTbl = Map.Make(String)
-type sign = rule SignTbl.t
+type sign = symb SignTbl.t
 let sign : sign ref = ref SignTbl.empty
 
 (* PRETTY PRINTING *)
@@ -80,9 +89,9 @@ and pp_spine fmt sp =
     else fprintf fmt "%a, %s.%a" pp_spine sp (string_of_int n) pp_term t
 
 let pp_ty fmt ty =
-  match ty with
-  | Star -> fprintf fmt "*"
-  | Term(tm) -> pp_term fmt tm
+  if ty.ty_spine = []
+  then fprintf fmt "%s" ty.ty_cst
+  else fprintf fmt "%s(%a)" ty.ty_cst pp_spine ty.ty_spine
 
 let rec pp_ctx fmt ctx =
   match ctx with

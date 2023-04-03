@@ -204,6 +204,9 @@ rew El(nat) --> ℕ
 symbol π (a : Tm U) (b : (_ : Tm El(a)) Tm U) : Tm U
 rew El(π($a, x.$b(x))) --> Π(El($a), x. El($b(x)))
 
+symbol eq (a : Tm U) (x : Tm El(a)) (y : Tm El(a)) : Tm U
+rew El(eq($a, $x, $y)) --> Eq(El($a), $x, $y)
+
 (* type in type *)
 symbol u : Tm U
 rew El(u) --> U
@@ -215,3 +218,22 @@ eval El(π(nat, _. u))
 let sym : Tm Π(U, a. Π(El(a), x. Π(El(a), y. Π(Eq(El(a), x, y), _. Eq(El(a), y, x)))))
     :=  λ(a. λ(x. λ(y. λ(p. J(p, z q. Eq(El(a), z, x), refl)))))
 type ﹫(sym, nat)
+
+let trans : Tm Π(U, a. Π(El(a), x. Π(El(a), y. Π(El(a), z.
+               Π(Eq(El(a), x, y), _. Π(Eq(El(a), y, z), _. Eq(El(a), x, z)))))))
+    := λ(a. λ(x. λ(y. λ(z. λ(p. λ(q. J(q, k r. Eq(El(a), x, k), p)))))))
+type ﹫(trans, nat)
+
+let transp : Tm Π(U, a. Π(U, b. Π(Eq(U, a, b), _. Π(El(a), _. El(b)))))
+    := λ(a. λ(b. λ(p. λ(x. J(p, z q. El(z), x)))))
+type transp
+
+
+(* "axiom of choice" *)
+(* note that thanks to the erased arguments, the term itself has no typing annotations *)
+let ac : Tm Π(U, a. Π(U, b. Π(Π(El(b), _. U), c.
+            Π(Π(El(a), _. Σ(El(b), x. El(﹫(c, x)))), _.
+            Σ(Π(El(a), _. El(b)), f. Π(El(a), x. El(﹫(c, ﹫(f, x)))))))))
+    := λ(a. λ(b. λ(c. λ(ϕ. mkΣ(λ(x. π₁(﹫(ϕ, x))), λ(x. π₂(﹫(ϕ, x))))))))
+
+type ﹫(﹫(﹫(ac, nat), nat), λ(x. eq(nat, x, 0)))

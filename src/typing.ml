@@ -26,18 +26,28 @@ exception NotInferable
 
 let typing_err_mes = false
 
+let expect_tm_symb symb : tm_symb =
+  match symb with
+  | Tm_symb(symb) -> symb
+  | _ -> failwith "type level constant appears as head of term"
+
+let expect_ty_symb symb : ty_symb =
+  match symb with
+  | Ty_symb(symb) -> symb
+  | _ -> failwith "term level constant appears as head of type"
+
 let rec infer (gamma : vctx) (tm : term) : vty =
   if typing_err_mes then Format.printf "%a |- %a => ?@." pp_vctx gamma pp_term tm;
   match tm.head with
   | Ix(n) -> lookup_ty gamma n
   | Symb(str) ->
-    let rule = SignTbl.find str !sign in
-    begin match rule.mode with
+    let symb = expect_tm_symb @@ SignTbl.find str !sign in
+    begin match symb.mode with
       | Pos ->
-        let env = type_spine gamma [] rule.prems tm.spine in
-        eval_ty env rule.ty
+        let env = type_spine gamma [] symb.prems tm.spine in
+        eval_ty env symb.ty
       | Neg -> raise NotInferable
-      | Ersd -> assert false (* signatures should not contain erased rules *) end
+      | Ersd -> assert false (* signatures should not contain erased symbs *) end
 
 and check (gamma : vctx) (tm : term) (vty : vty) : unit =
   if typing_err_mes then Format.printf "%a |- %a <= %a@." pp_vctx gamma pp_term tm pp_vty vty;
@@ -45,27 +55,20 @@ and check (gamma : vctx) (tm : term) (vty : vty) : unit =
   | Ix(_) ->
     let vty' = infer gamma tm in equal_vty vty vty' (List.length gamma)
   | Symb(str) ->
-    let rule = SignTbl.find str !sign in
-    begin match rule.mode with
+    let symb = expect_tm_symb @@ SignTbl.find str !sign in
+    begin match symb.mode with
       | Pos ->
         let vty' = infer gamma tm in equal_vty vty vty' (List.length gamma)
       | Ersd -> assert false
       | Neg ->
-        let prevals = match_ty rule.ty vty in
-        let prems = remove_last_elems (List.length prevals) rule.prems in
+        let prevals = match_ty symb.ty vty in
+        let prems = remove_last_elems (List.length prevals) symb.prems in
         ignore @@ type_spine gamma prevals prems tm.spine end
 
 and check_type (gamma : vctx) (ty : ty) : unit =
   if typing_err_mes then Format.printf "%a |- %a <=> * @." pp_vctx gamma pp_ty ty;
-  match ty with
-  | Star -> assert false
-  | Term(t) -> begin
-      match t.head with
-      | Ix(n) -> assert false
-      | Symb(str) ->
-        let rule = SignTbl.find str !sign in
-        assert (rule.ty = Star);
-        ignore @@ type_spine gamma [] rule.prems t.spine end
+  let symb = expect_ty_symb @@ SignTbl.find ty.ty_cst !sign in
+  ignore @@ type_spine gamma [] symb.prems ty.ty_spine
 
 and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : env =
   if typing_err_mes then Format.printf "%a | %a |- %a ; %a ~~> ?@."

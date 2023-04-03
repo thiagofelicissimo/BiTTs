@@ -25,8 +25,10 @@ and closure =
   }
 
 type vty =
-  | Star
-  | Val of value
+  {
+    vty_cst : string;
+    vty_env : env
+  }
 
 type vctx = (value * vty) list
 
@@ -53,11 +55,10 @@ and pp_env fmt env =
   | Clo({binds = n; body = t; env = env'}) :: env ->
     fprintf fmt "%a, <%a|%s.%a>" pp_env env pp_env env' (string_of_int n) T.pp_term t
 
-
 let pp_vty fmt vty =
-  match vty with
-  | Star -> fprintf fmt "*"
-  | Val(v) -> pp_value fmt v
+  if vty.vty_env = []
+  then fprintf fmt "%s" vty.vty_cst
+  else fprintf fmt "%s(%a)" vty.vty_cst pp_env vty.vty_env
 
 let rec pp_vctx fmt vctx =
   match vctx with

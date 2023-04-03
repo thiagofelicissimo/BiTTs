@@ -171,26 +171,18 @@ let close_env (depth : int) (binds : int) (env : env) : spine =
 (* types and contexts *)
 
 let eval_ty (env : env) (ty : ty) : vty =
-  match ty with
-  | Term(t) -> Val(eval_tm env t)
-  | Star -> Star
+  {vty_cst = ty.ty_cst; vty_env = eval_sp env ty.ty_spine}
 
 let match_ty (ty : ty) (vty : vty) : env =
-  match ty, vty with
-  | Star, Star -> []
-  | Term(t), Val(v) -> match_tbl_to_env @@ match_val empty_match_tbl t v
-  | _ -> raise NoMatch
+  if ty.ty_cst <> vty.vty_cst then raise NoMatch
+  else match_tbl_to_env @@ match_sp empty_match_tbl ty.ty_spine vty.vty_env
 
 let equal_vty (vty : vty) (vty' : vty) (depth : int) : unit =
-  match vty, vty' with
-  | Val(v), Val(v') -> equal_val v v' depth
-  | Star, Star -> ()
-  | _ -> raise NotEqual
+  if vty.vty_cst <> vty'.vty_cst then raise NotEqual
+  else equal_env vty.vty_env vty'.vty_env depth
 
 let read_back_ty (depth : int) (vty : vty) : ty =
-  match vty with
-  | Star -> Star
-  | Val(v) -> Term(read_back_tm depth v)
+  {ty_cst = vty.vty_cst; ty_spine = read_back_sp depth vty.vty_env}
 
 
 let env_of_vctx (vctx : vctx) : env = List.map (fun x -> (Val(fst x) : enve)) vctx

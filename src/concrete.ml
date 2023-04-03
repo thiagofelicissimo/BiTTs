@@ -8,9 +8,7 @@ and spine = arg list
 
 and arg = { body : term; scope : string list }
 
-type ty =
-  | Star
-  | Term of term
+type ty = { ty_cst : string; ty_spine : spine}
 
 type ctx = (string * ty) list
 
@@ -23,7 +21,8 @@ type prem = mode * string * ctx * ty
 
 type entry =
   | Let of string * ty option * term
-  | Rule of string * mode * prem list * ty
+  | Tm_symb of string * mode * prem list * ty
+  | Ty_symb of string * prem list
   | Rew of term * term
   | Type of term
   | Eval of term
@@ -51,9 +50,7 @@ and scope_arg scope (arg : arg) : T.arg =
   {body = scope_tm (arg.scope @ scope) arg.body; binds = List.length arg.scope}
 
 let scope_ty scope (ty : ty) : T.ty =
-  match ty with
-  | Star -> T.Star
-  | Term(tm) -> T.Term(scope_tm scope tm)
+  { ty_cst = ty.ty_cst; ty_spine = scope_sp scope ty.ty_spine }
 
 let scope_of_ctx (ctx : ctx) : string list = List.map fst ctx
 
@@ -83,11 +80,16 @@ let rec scope_prems scope (prems : prem list) : T.prem list =
     let prems' = scope_prems scope prems in
     {T.mode = mode_to_mode mode; T.boundary = ty'; T.ctx = ctx'} :: prems'
 
-let scope_rule mode prems ty : T.rule =
+let scope_tm_symb mode prems ty : T.tm_symb =
   {
     T.prems = scope_prems [] prems;
     T.mode = mode_to_mode mode;
     T.ty = scope_ty (scope_of_prems prems) ty
+  }
+
+let scope_ty_symb prems : T.ty_symb =
+  {
+    T.prems = scope_prems [] prems
   }
 
 let rec genscope_lhs tm list : string list =
@@ -132,9 +134,8 @@ and pp_arg fmt arg =
   else fprintf fmt "%a. %a" pp_binds arg.scope pp_term arg.body
 
 let pp_ty fmt ty =
-  match ty with
-  | Star -> fprintf fmt "*"
-  | Term(tm) -> pp_term fmt tm
+  if ty.ty_spine = [] then fprintf fmt "%s" ty.ty_cst
+  else fprintf fmt "%s(%a)" ty.ty_cst pp_spine ty.ty_spine
 
 let pp_pol fmt pol =
   match pol with
@@ -164,10 +165,14 @@ let pp_entry fmt entry =
   | Let(name, None, tm) -> fprintf fmt "let %s := %a@." name pp_term tm
   | Let(name, Some ty, tm) -> fprintf fmt "let %s : %a := %a@." name pp_ty ty pp_term tm
   | Rew(lhs, rhs) -> fprintf fmt "rew %a --> %a@." pp_term lhs pp_term rhs
-  | Rule(name, mode, [], ty) ->
+  | Tm_symb(name, mode, [], ty) ->
     fprintf fmt "symbol%a %s : %a@." pp_pol mode name pp_ty ty
-  | Rule(name, mode, prems, ty) ->
+  | Tm_symb(name, mode, prems, ty) ->
     fprintf fmt "symbol%a %s %a : %a@." pp_pol mode name pp_prems prems pp_ty ty
+  | Ty_symb(name, []) ->
+    fprintf fmt "symbol %s : *@." name
+  | Ty_symb(name, prems) ->
+    fprintf fmt "symbol %s %a : *@." name pp_prems prems
   | Type(tm) -> fprintf fmt "type %a@."pp_term tm
   | Eval(tm) -> fprintf fmt "eval %a@."pp_term tm
 

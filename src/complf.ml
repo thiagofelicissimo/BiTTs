@@ -17,9 +17,12 @@ let () =
     List.iter begin fun entry ->
       (*  Format.printf "%a" C.pp_entry entry;*)
       match entry with
-      | C.Rule(name, mode, prems, ty) ->
-        let rule = C.scope_rule mode prems ty in
-        T.sign := T.SignTbl.add name rule !T.sign
+      | C.Tm_symb(name, mode, prems, ty) ->
+        let symb = C.scope_tm_symb mode prems ty in
+        T.sign := T.SignTbl.add name (T.Tm_symb symb) !T.sign
+      | C.Ty_symb(name, prems) ->
+        let symb = C.scope_ty_symb prems in
+        T.sign := T.SignTbl.add name (T.Ty_symb symb) !T.sign
       | C.Rew(lhs, rhs) ->
         let head_symb, rew = C.scope_rew lhs rhs in
         let rews = try T.RewTbl.find head_symb !T.rew_map with _ -> [] in
@@ -28,7 +31,7 @@ let () =
         let tm = C.scope_tm [] tm in
         let vty =  Ty.infer [] tm in
         let ty = E.read_back_ty 0 vty in
-        T.sign := T.SignTbl.add name {T.prems = []; T.mode = T.Pos; T.ty = ty} !T.sign;
+        T.sign := T.SignTbl.add name (T.Tm_symb {T.prems = []; T.mode = T.Pos; T.ty = ty}) !T.sign;
         T.rew_map := T.RewTbl.add name [{T.lhs_spine = []; T.rhs = tm}] !T.rew_map
       | Let(name, Some ty, tm) ->
         let tm = C.scope_tm [] tm in
@@ -36,7 +39,7 @@ let () =
         Ty.check_type [] ty;
         let vty = E.eval_ty [] ty in
         Ty.check [] tm vty;
-        T.sign := T.SignTbl.add name {T.prems = []; T.mode = T.Pos; T.ty = ty} !T.sign;
+        T.sign := T.SignTbl.add name (T.Tm_symb {T.prems = []; T.mode = T.Pos; T.ty = ty}) !T.sign;
         T.rew_map := T.RewTbl.add name [{T.lhs_spine = []; T.rhs = tm}] !T.rew_map
       | Type(ctm) ->
         let tm = C.scope_tm [] ctm in
