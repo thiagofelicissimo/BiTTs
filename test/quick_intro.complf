@@ -18,7 +18,7 @@ symbol Tm (A : Ty) : *
 (*  A type-level symbol declaration consists of a name for the symbol, along with a list
     of arguments it takes, and at the end the token * signals that this symbol is type-level.
 
-    We can now write "A : Ty" to represent the judgmnt form "A type", and "t : Tm A"
+    We can now write "A : Ty" to represent the judgment form "A type", and "t : Tm A"
     to represent the judgment form "t : A".
 
     Now that we have the basic building blocks of MLTT, we can start the interesting part:
@@ -40,19 +40,19 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
 
     - Arguments between {..} are called erased arguments. This means that each time we
     write a term headed by λ, we only write λ(x. t), and therefore the arguments A and B
-    are ommited from the syntax.
+    are omitted from the syntax.
 
     - Arguments between (..)+ are arguments that are typed in infer mode when typing the
     symbol. This means that when a term is given at this argument, it should be able to
-    synthetize a type (as we will discuss later, the terms that can syntethize a type are
+    synthesize a type (as we will discuss later, the terms that can synthesize a type are
     variables and terms headed by symbols defined with symbol+).
 
     - Arguments between (..)- are arguments that are typed in check mode when typing the
-    symbol. This means that they do not need to be able to synthetize a type, as they are
+    symbol. This means that they do not need to be able to synthesize a type, as they are
     given a type to check against.
 
     Moreover, term-level symbols are accompanied by a mode annotation. For instance, Π
-    is declared with symbol+, which means that Π can synthetize its type and hence can
+    is declared with symbol+, which means that Π can synthesize its type and hence can
     be typed in both infer or check mode. We also have symbols declared with symbol-, which
     can only be typed in check mode. Because of this, they can use the type they check
     against to recover some of its erased arguments. This is the case of λ, which
@@ -66,10 +66,10 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
 rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 
 (*  The commands symbol and rew are used to define the theory we work in, and therefore
-    they do not do any form of checking. It is the responsability of the user to make
+    they do not do any form of checking. It is the responsibility of the user to make
     sure that the symbols that he defines make sense, and that the rewrite rules are
     confluent and preserve typing. Instead, it is the terms written inside of the
-    theory that can be typed by CompLF's bidirectiona typing algorithm. Let us look
+    theory that can be typed by CompLF's bidirectional typing algorithm. Let us look
     at some examples.
 
     We first pose an auxiliary unspecified type.
@@ -85,7 +85,7 @@ let church1 : Tm Π(Π(T, _. T), _. Π(T, _. T)) := λ(f. λ(x. ﹫(f, x)))
 (* This is typed in the following way. First, we verify that the given type is well-typed,
    and then check the term given after the ":=" with the given type.
 
-   When a term is inferable, we can omit the type anotation.
+   When a term is inferable, we can omit the type annotation.
 *)
 let church1_id := ﹫(church1, λ(x.x))
 
@@ -100,21 +100,21 @@ eval ﹫(church1, λ(x.x))
 (* eval ﹫(λ(x. ﹫(x, x)), λ(x. ﹫(x, x))) (* Ω *) *)
 
 (* The following declaration would raise the error "Typing error: A part of the term that
-   should be inferable cannot synthetize a type". Indeed, because we are ommiting the
+   should be inferable cannot synthesize a type". Indeed, because we are omitting the
    typing annotation, the term should be inferable, however λ is a negative symbol,
    and thus can only be typed in check mode.
 *)
 (* let infer_lam := λ(f. λ(x. ﹫(f, x))) *)
 
 (* The following would also raise the same error. Indeed, the first non-erased argument
-   of ﹫ is positive, and thus needs to be able to synthetize its type, but λ is a negative
+   of ﹫ is positive, and thus needs to be able to synthesize its type, but λ is a negative
    symbol.
 *)
 (* let redex : Tm Π(T, _. T) := λ(x. ﹫(λ(y.y), x)) *)
 
 (* However, as designers of the theory we are defining, we can instead chose a different
    definition of dependent product types, in which the symbol λ has enough information to
-   synthetize its type. This the allow us to declare it as a positive symbol.
+   synthesize its type. This the allow us to declare it as a positive symbol.
 *)
 
 symbol Π₂ (A : Ty) (B : (x : Tm A) Ty) : Ty
@@ -129,7 +129,7 @@ rew ﹫₂(λ₂($T, x. $t(x)), $u) --> $t($u)
    symbol has mode +, and a non-annotated argument has mode -, so we don't need to
    write them every time.
 
-   Now that λ₂ is a positive symbol, in can be infered, and hence we can define
+   Now that λ₂ is a positive symbol, in can be inferred, and hence we can define
    the terms infer_lam and redex that would have been rejected.
 *)
 
@@ -140,7 +140,7 @@ let redex := λ₂(T, x. ﹫₂(λ₂(T, y.y), x))
 type redex
 
 
-(* Let us now continue with our definiton of MLTT and add two other type formers:
+(* Let us now continue with our definition of MLTT and add two other type formers:
    dependent sums and a universe.
 *)
 
@@ -167,7 +167,7 @@ symbol σ (a : Tm U) (b : (_ : Tm El(a)) Tm U) : Tm U
 rew El(σ($a, x.$b(x))) --> Σ(El($a), x. El($b(x)))
 
 (* As an example, we can write the "axiom of choice". Note that thanks to the erased arguments,
-   the term itself has absolutaly no type annotations.
+   the term itself has absolutely no type annotations.
 *)
 let ac : Tm Π(U, a. Π(U, b. Π(Π(El(b), _. U), c.
             Π(Π(El(a), _. Σ(El(b), x. El(﹫(c, x)))), _.
@@ -251,7 +251,7 @@ let 8 := S(S(S(S(4))))
 (* One interesting remark is that because of erased arguments, uniqueness of types
    might not hold. For instance, the term "mkΣ(6, refl)" can be checked as having two
    different and not equivalent types. This also shows that there is no hope for
-   mkΣ to be able to syntethize its type in the absence of further type annotations
+   mkΣ to be able to synthesize its type in the absence of further type annotations
 *)
 let pair : Tm Σ(ℕ, x. Eq(ℕ, x, x)) := mkΣ(6, refl)
 let pair2 : Tm Σ(ℕ, x. Eq(ℕ, 6, x)) := mkΣ(6, refl)
@@ -278,7 +278,7 @@ rew El(list($a)) --> List(El($a))
 
 (* Some examples of functions defined with ind_List *)
 
-let hdℕ : Tm Π(List(ℕ), _. ℕ) (* returs 0 if l = nil *)
+let hdℕ : Tm Π(List(ℕ), _. ℕ) (* returns 0 if l = nil *)
     := λ(l. ind_List(l, _. ℕ, 0, x l2 pl. x))
 
 let tlℕ : Tm Π(List(ℕ), _. List(ℕ)) (* returns nil if l = nil *)

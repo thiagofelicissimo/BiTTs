@@ -1,0 +1,44 @@
+
+(* AGDA-STYLE UNIVERSE POLYMORPHISM *)
+
+symbol Ty : *
+symbol Tm (A : Ty) : *
+
+(* Meta-type of levels representing natural numbers *)
+
+symbol Lvl : *
+symbol lzero : Lvl
+symbol lsucc (_ : Lvl) : Lvl
+symbol lmax (_ : Lvl) (_ : Lvl) : Lvl
+
+rew lmax(lzero, $x) --> $x
+rew lmax($x, lzero) --> $x
+rew lmax(lsucc($x), lsucc($y)) --> lsucc(lmax($x, $y))
+
+symbol U (_ : Lvl) : Ty
+symbol El {i : Lvl} (A : Tm U(i))+ : Ty
+
+(* Dependent products along with codes for U *)
+
+symbol Π (A : Ty) (B : (x : Tm A) Ty) : Ty
+symbol- λ {A : Ty} {B : (_ : Tm A) Ty} (t : (x : Tm A) Tm B(x)) : Tm Π(A, x. B(x))
+symbol ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A) : Tm B(u)
+rew ﹫(λ(x. $t(x)), $u) --> $t($u)
+
+symbol π (i : Lvl) (j : Lvl) (A : Tm U(i)) (B : (x : Tm El(A)) Tm U(j)) : Tm U(lmax(i, j))
+rew El(π($i, $j, $A, x. $B(x))) --> Π(El($A), x. El($B(x)))
+
+(* Level quantification *)
+
+symbol ∀ (_ : (i : Lvl) Ty) : Ty
+symbol- Λ {A : (i : Lvl) Ty} (t : (i : Lvl) Tm A(i)) : Tm ∀(i. A(i))
+symbol inst {A : (i : Lvl) Ty} (t : Tm ∀(i. A(i)))+ (n : Lvl) : Tm A(n)
+rew inst(Λ(i. $t(i)), $n) --> $t($n)
+
+(* polymorphic id funciton *)
+
+let id_poly : Tm ∀(i. Π(U(i), a. Π(El(a), _. El(a))))
+    := Λ(i. λ(a. λ(x. x)))
+
+type inst(id_poly, lzero)
+eval inst(id_poly, lzero)
