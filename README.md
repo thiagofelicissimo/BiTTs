@@ -6,7 +6,7 @@ CompLF is a logical framework suitable for defining computational theories (whos
  
 ## How to use
 
-The file [test/quick_intro.complf](test/quick_intro.complf) gives an introduction to CompLF. You can run `make test` in order to see the output it produces. If you want a more detailed introduction, look at the file [test/intro.complf](test/intro.complf) which explains a bit more some technical parts. The full definition of CompLF, its metatheory, the bidirectional typing algorithm, and its soundness and correctness proofs are the subject of an article currently in preparation. A link will be added here as soon as it becomes available.
+The file [test/quick_intro.complf](test/quick_intro.complf) gives an introduction to CompLF. You can run `make test` in order to see the output it produces. If you want a more detailed introduction, look at the file [test/intro.complf](test/intro.complf) which explains a bit more some technical parts. The full definition of CompLF, its metatheory, the bidirectional typing algorithm, and its soundness and completeness proofs are the subject of an article currently in preparation. A link will be added here as soon as it becomes available.
 
 ## Implementation
 
