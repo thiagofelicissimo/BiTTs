@@ -8,7 +8,7 @@ CompLF is a logical framework suitable for defining computational theories, that
 
 - Minimal syntax: In most logical frameworks, when defining for instance sigma types, we will pose constants `mkSig : (A : Ty) (B : Tm A -> Ty) -> Tm Sig(A, x. B)`, `pi1 : (A : Ty) (B : Tm A -> Ty) (t : Tm Sig(A, x. B)) : Tm A` and `pi1 : (A : Ty) (B : Tm A -> Ty) (t : Tm Sig(A, x. B)) : Tm A`
 
-The file `test/test.complf` gives an introduction to CompLF and its functionalities. You can run `make test` in order to see the output it produces.
+The file `test/quick_intro.complf` gives an introduction to CompLF. You can run `make test` in order to see the output it produces. If you want a more detailed introduction, look at the file `test/intro.complf` which explains a bit more some technical parts. The full definition of CompLF, its metatheory, the bidirectional typing algorithm, and its soundness and correctness proofs are the subject of an article currently in preparation. A link will be added here as soon as it becomes available.
 
 ## Implementation
 

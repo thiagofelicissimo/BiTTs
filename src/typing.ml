@@ -25,6 +25,7 @@ let lookup_ty (gamma : vctx) (n : int) : vty =
 exception NotInferable
 exception TypingLenghtMismatch
 exception SymbolNotDefined of string
+exception BindingLengthMismatch
 
 let typing_err_mes = false
 
@@ -85,6 +86,8 @@ and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : 
   | [], [] -> prevals
 
   | {ctx = delta; mode = Pos; boundary = ty} :: prems, arg :: e ->
+    if List.length delta != arg.binds then raise BindingLengthMismatch;
+
     let prems, k = remove_erased prems in (* removes the {X1 : T1} .. {Xk : Tk} *)
     (* Format.printf "k = %s@." (string_of_int k); *)
     let rho_e = type_spine gamma prevals prems e in
@@ -109,6 +112,8 @@ and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : 
     enve :: nu' @ rho_e
 
   | {ctx = delta; mode = Neg; boundary = ty} :: prems, arg :: e ->
+    if List.length delta != arg.binds then raise BindingLengthMismatch;
+
     let rho_e = type_spine gamma prevals prems e in
     let delta' = eval_ctx (List.length gamma) rho_e delta in
     let rho_e' = env_of_vctx delta' @ rho_e in

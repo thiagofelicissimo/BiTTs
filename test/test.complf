@@ -144,6 +144,10 @@ type ﹫(church1, λ(x.x))
 (* And we can reduce a term using "eval" *)
 eval ﹫(church1, λ(x.x))
 
+(* Note that "eval" does not try to type the term before evaluating it, so it is possible
+   to make the evaluator loop by giving it an untyped term, such as Ω *)
+(* eval ﹫(λ(x. ﹫(x, x)), λ(x. ﹫(x, x))) (* Ω *) *)
+
 (* The following declaration would raise the error "Typing error: A part of the term that
    should be inferable cannot synthetize a type". Indeed, because we are ommiting the
    typing annotation, the term should be inferable, however λ is a negative symbol,
@@ -250,7 +254,7 @@ let transp : Tm Π(U, a. Π(U, b. Π(Eq(U, a, b), _. Π(El(a), _. El(b)))))
 type transp
 
 
-(* We can then add natural numbers *)
+(* We can then add natural numbers, along with a code for it in U *)
 
 symbol ℕ : Ty
 symbol 0 : Tm ℕ
@@ -265,6 +269,9 @@ symbol+ ℕ_ind (P : (_ : Tm ℕ) Ty)-
 rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), 0) --> $p0
 rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), S($n)) -->
     $ps($n, ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), $n))
+
+symbol nat : Tm U
+rew El(nat) --> ℕ
 
 (* And we can write some functions using ℕ_ind, such as ＋, × and fact *)
 
@@ -301,6 +308,40 @@ let 8 := S(S(S(S(4))))
 *)
 let pair : Tm Σ(ℕ, x. Eq(ℕ, x, x)) := mkΣ(6, refl)
 let pair2 : Tm Σ(ℕ, x. Eq(ℕ, 6, x)) := mkΣ(6, refl)
+
+(* Let us now define lists with a code in U for them *)
+
+symbol List (A : Ty) : Ty
+symbol- nil {A : Ty} : Tm List(A)
+symbol- cons {A : Ty} (a : Tm A) (l : Tm List(A)) : Tm List(A)
+
+symbol ind_List {A : Ty}
+              (l : Tm List(A))+
+              (P : (_ : Tm List(A)) Ty)
+              (l_nil : Tm P(nil))
+              (l_cons : (a : Tm A, l : Tm List(A), pl : Tm P(l)) Tm P(cons(a, l)))
+              : Tm P(l)
+
+rew ind_List(nil, l. $P(l), $p_nil, a l pl. $p_cons(a, l, pl)) --> $p_nil
+rew ind_List(cons($a, $l), l. $P(l), $p_nil, a l pl. $p_cons(a, l, pl)) -->
+    $p_cons($a, $l, ind_List($l, l. $P(l), $p_nil, a l pl. $p_cons(a, l, pl)))
+
+symbol list (a : Tm U) : Tm U
+rew El(list($a)) --> List(El($a))
+
+(* Some examples of functions defined with ind_List *)
+
+let hdℕ : Tm Π(List(ℕ), _. ℕ) (* returs 0 if l = nil *)
+    := λ(l. ind_List(l, _. ℕ, 0, x l2 pl. x))
+
+let tlℕ : Tm Π(List(ℕ), _. List(ℕ)) (* returns nil if l = nil *)
+    := λ(l. ind_List(l, _. List(ℕ), nil, x l2 pl. l2))
+
+let 321 : Tm List(ℕ) := cons(3, cons(2, cons(1, nil)))
+eval 321
+eval ﹫(hdℕ, 321)
+eval ﹫(hdℕ, nil)
+eval ﹫(tlℕ, 321)
 
 
 
@@ -403,7 +444,6 @@ symbol+ ℕ_ind (P : (_ : Tm ℕ) Ty)-
 rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), 0) --> $p0
 rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), S($n)) -->
     $ps($n, ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), $n))
-
 
 let ＋ : Tm Π(ℕ, _. Π(ℕ, _. ℕ)) := λ(x. λ(y. ℕ_ind(_. ℕ, x, _ n. S(n), y)))
 

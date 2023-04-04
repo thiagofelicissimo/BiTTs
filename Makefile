@@ -4,7 +4,7 @@ all:
 	dune build
 
 test:
-	dune exec -- complf test/test.complf
+	dune exec -- complf test/quick_intro.complf
 
 test-big-numbers:
 	dune exec -- complf test/big_numbers.complf

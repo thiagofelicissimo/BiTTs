@@ -6,12 +6,28 @@ module L = Sedlexer
 module E = Eval
 
 
+let colored n s =
+  "\027[3" ^ string_of_int n ^ "m" ^ s ^ "\027[m"
+
+let yellow = colored 3
+let blue = colored 6
+let red = colored 1
+(* currently not used
+let violet = colored 5
+let green = colored 2 *)
+
+let typing_error () = Format.printf "%s: " (red "Typing error")
+let equality_error () = Format.printf "%s: " (red "Equality checking error")
+let matching_error () = Format.printf "%s: " (red "Matching error")
+let syntax_error () = Format.printf "%s: " (red "Syntax error")
+
+
 let current_entry : C.entry option ref = ref None
 
 let report_error _ =
   match !current_entry with
   | None -> assert false
-  | Some entry -> Format.printf "Error while handling the entry@.%a" C.pp_entry entry
+  | Some entry -> Format.printf "%s@.%a" (yellow "Error while handling the folowing entry:") C.pp_entry entry
 
 let () =
   let input_files : string list ref = ref [] in
@@ -54,12 +70,12 @@ let () =
           let tm = C.scope_tm [] ctm in
           let vty = Ty.infer [] tm in
           let ty = E.read_back_ty 0 vty in
-          Format.printf "[type] %a : %a@." (T.ppn_term 0) tm (T.ppn_ty 0) ty
+          Format.printf "[%s] %a : %a@." (blue "type") (T.ppn_term 0) tm (T.ppn_ty 0) ty
         | Eval(ctm) ->
           let tm = C.scope_tm [] ctm in
           let vtm = E.eval_tm [] tm in
           let tm' = E.read_back_tm 0 vtm in
-          Format.printf "[eval] %a -->* %a@." (T.ppn_term 0) tm (T.ppn_term 0) tm'
+          Format.printf "[%s] %a -->* %a@." (blue "eval") (T.ppn_term 0) tm (T.ppn_term 0) tm'
       end prog
     end !input_files
   with
@@ -67,40 +83,54 @@ let () =
     report_error ();
     let tm = E.read_back_tm d v in
     let tm' = E.read_back_tm d v' in
-    Format.printf "Equality check error: %a != %a@." T.pp_term tm T.pp_term tm'
+    equality_error ();
+    Format.printf "%a != %a@." T.pp_term tm T.pp_term tm'
   | E.NotEqualEnv(e, e', d) ->
     report_error ();
     let e = E.read_back_sp d e in
     let e' = E.read_back_sp d e' in
-    Format.printf "Equality check error: %a != %a@." T.pp_spine e T.pp_spine e'
+    equality_error ();
+    Format.printf "%a != %a@." T.pp_spine e T.pp_spine e'
   | E.NotEqualVTy(vty, vty', d) ->
     report_error ();
     let ty = E.read_back_ty d vty in
     let ty' = E.read_back_ty d vty' in
-    Format.printf "Equality check error: %a != %a@." T.pp_ty ty T.pp_ty ty'
+    equality_error ();
+    Format.printf "%a != %a@." T.pp_ty ty T.pp_ty ty'
   | E.NoMatchTm(t, v) ->
     report_error ();
     let t' = E.read_back_tm 0 v in
-    Format.printf "Matching error: %a !< %a@." T.pp_term t T.pp_term t'
+    matching_error ();
+    Format.printf "%a !< %a@." T.pp_term t T.pp_term t'
   | E.NoMatchSp(e, env) ->
     report_error ();
     let e' = E.read_back_sp 0 env in
-    Format.printf "Matching error: %a !< %a@." T.pp_spine e T.pp_spine e'
+    matching_error ();
+    Format.printf "%a !< %a@." T.pp_spine e T.pp_spine e'
   | E.NoMatchTy(ty, vty) ->
     report_error ();
     let ty' = E.read_back_ty 0 vty in
-    Format.printf "Matching error: %a !< %a@." T.pp_ty ty T.pp_ty ty'
+    matching_error ();
+    Format.printf "%a !< %a@." T.pp_ty ty T.pp_ty ty'
   | Ty.NotInferable ->
     report_error ();
-    Format.printf "Typing error: A part of the term that should be inferable cannot synthetize a type@."
+    typing_error ();
+    Format.printf "A part of the term that should be inferable cannot synthetize a type@."
   | Ty.TypingLenghtMismatch ->
     report_error ();
-    Format.printf "Typing error: Some spine does not match the expected length of the corresponding symbol@."
+    typing_error ();
+    Format.printf "Some spine does not match the expected length of the corresponding symbol@."
+  | Ty.BindingLengthMismatch ->
+    report_error ();
+    typing_error ();
+    Format.printf "Some argument of a symbol binds a different number of variables then it should@."
   | L.SyntaxError(b, e) ->
     let l = b.Lexing.pos_lnum in
     let fc = b.pos_cnum - b.pos_bol + 1 in
     let lc = e.Lexing.pos_cnum - b.pos_bol + 1 in
-    Format.printf "Syntax Error: line %d, characters %d-%d@." l fc lc
+    syntax_error ();
+    Format.printf "line %d, characters %d-%d@." l fc lc
   | Ty.SymbolNotDefined s ->
     report_error ();
-    Format.printf "Typing Error: The name %s is not defined@." s
+    typing_error ();
+    Format.printf "The name %s is not defined@." s

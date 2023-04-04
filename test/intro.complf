@@ -1,9 +1,31 @@
 
-(* QUICK INTRODUCTION TO COMPLF *)
+(* INTRODUCTION TO COMPLF *)
 
 (* In this file I will showcase how CompLF can be used through an example: we will see
-   how to define a version of Martin-Lof's Type Theory. This file is intended to be a quick
-   introduction in which I don't explain everythin --- see intro.complf for a full introduction.
+   how to define a version of Martin-Lof's Type Theory. The explanations are sometimes quite
+   long, so if you want something shorter read instead "quick_intro.complf".
+
+   Before starting, let me explain a bit the raw syntax of CompLF. A term is an
+   expression of the form "c(𝐭)" or "x(𝐭)" where x is a variable, c is a term-level symbol
+   and "𝐭" is a spine. A spine is a list of arguments, each one of the form "x1..xk. t",
+   where "x1..xk" is a list of variables and t is a term. When "x1..xk" is empty we write "t"
+   instead of ". t" and when "𝐭" is empty we write "c" and "x" instead of "c()" and "x()".
+   A type is an expression of the form "c(𝐭)" where c is a type-level symbol and 𝐭 is a spine.
+
+   This explanaiton is actually only an approximation, because in CompLF the raw syntax
+   is already subject to a form of simple typing, which allows to specify which expressions
+   are syntactically well-formed. For instance, with the symbol λ that we will define
+   in a moment, λ(x.t) is a valid (raw) term, but λ(t) or λ(t, u) are not.
+
+   Remark that in CompLF a variable can appear applied to a spine, as in x(𝐭). However,
+   the regular way of defining substitution would not work here: syntactically replacing
+   x by "y.y" in "x(u)" would lead to "(y.y)(u)", which is not a well-formed term. Instead,
+   we use hereditary substitution, a kind of substitution which integrates a form of beta-
+   reduction, allowing us to have "x(u)[(y.y)/x] = y[u/y] = u". The termination of this kind
+   of substitution is ensured by the fact that our raw terms are subject to a form of
+   simple typing, as stated in the previous paragraph.
+
+   Let us now start constructing our example.
 
    The first building block of a theory is its judgment forms. In MLTT there are two
    of such: "t : A" asserts that t is a term of type A, and "A type" asserts that A
@@ -15,11 +37,18 @@ symbol Ty : *
 
 symbol Tm (A : Ty) : *
 
-(*  A type-level symbol declaration consists of a name for the symbol, along with a list
+(*
+    Before saying how this allows to represent judgment forms, let me explain the syntax.
+    A type-level symbol declaration consists of a name for the symbol, along with a list
     of arguments it takes, and at the end the token * signals that this symbol is type-level.
+    I will better explain the syntax of arguments later.
 
     We can now write "A : Ty" to represent the judgmnt form "A type", and "t : Tm A"
-    to represent the judgment form "t : A".
+    to represent the judgment form "t : A". Note that here we are allowed to write "Tm A"
+    instead of "Tm(A)": type-level symbols with only one argument have a special case in
+    the parser in order to help make the notation lighter. Note that when we write
+    "A : Ty", even if A represents a type of MLTT, it is not a type of the framework, but
+    a term of type Ty.
 
     Now that we have the basic building blocks of MLTT, we can start the interesting part:
     adding type formers. The first types I'll add are of course the dependent products.
@@ -33,19 +62,31 @@ symbol- λ {A : Ty} {B : (_ : Tm A) Ty} (t : (x : Tm A) Tm B(x))- : Tm Π(A, x. 
 
 symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : Tm B(u)
 
-(*  Term-level symbols are declared with a list of arguments, each one of the form
+(*
+    There's a lot of new syntax, so let me explain it all before moving on.
+
+    Term-level symbols are declared with a list of arguments, each one of the form
     "[x : (x1 : T1, ..., xk : Tk) T]", where T1..Tk and T are types of the framework,
     and the enclosing tokens (here represented generically by "[" and "]"), are one of
     the following:
 
-    - Arguments between {..} are called erased arguments. This means that each time we
+    - Arguments between {..} are called erased arguments, and this is because when looking
+    at the "arity" of a symbol (roughly, how many arguments it takes and how many variables
+    it binds in each argument), these arguments are erased. This means that each time we
     write a term headed by λ, we only write λ(x. t), and therefore the arguments A and B
-    are ommited from the syntax.
+    are ommited from the syntax. This can be compared to the implicit arguments of Coq
+    and Agda, but a major difference is that these arguments are never reconstructed in the
+    internal syntax. Therefore, unlike with implicit arguments, the syntax that the user
+    sees is the real syntax that we have internally.
 
     - Arguments between (..)+ are arguments that are typed in infer mode when typing the
     symbol. This means that when a term is given at this argument, it should be able to
     synthetize a type (as we will discuss later, the terms that can syntethize a type are
-    variables and terms headed by symbols defined with symbol+).
+    variables and terms headed by symbols defined with symbol+). If we have (x : T)+, then
+    the free variables x1 .. xk that appear in T should be exactly the erased arguments
+    that were declared just before x, in the same order as they appear in T. For instance,
+    in the case of ﹫ the free variables of the t are A and B, and correspond exactly to
+    the erased arguments declared just before t.
 
     - Arguments between (..)- are arguments that are typed in check mode when typing the
     symbol. This means that they do not need to be able to synthetize a type, as they are
@@ -53,10 +94,16 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
 
     Moreover, term-level symbols are accompanied by a mode annotation. For instance, Π
     is declared with symbol+, which means that Π can synthetize its type and hence can
-    be typed in both infer or check mode. We also have symbols declared with symbol-, which
-    can only be typed in check mode. Because of this, they can use the type they check
-    against to recover some of its erased arguments. This is the case of λ, which
-    recovers A and B from the given type.
+    be typed in both infer or check mode. In order for a symbol to be declared with symbol+,
+    all of its erased arguments must be recovarable from (..)+ arguments. On the other hand,
+    we also have symbols declared with symbol-, which can only be typed in check mode. Because
+    of this, they can use the type they check agains to recover some of its erased arguments.
+    This is the case of λ, which recovers A and B from the given type.
+
+    What does it mean for an argument to be recovarable from a type? We will not detail all
+    of the requirements, but roughly the type should be a pattern, in wich every free variable
+    is fully applied to the variables in its local context, and the symbols that appear in it
+    should not be the head of rewrite rules and neither contain erased arguments on their type.
 
     Now let us get back to the example. In order to finish the definition of dependent products
     we still need to add its associated computational rule. This is done in the following
@@ -83,7 +130,9 @@ symbol T : Ty
 let church1 : Tm Π(Π(T, _. T), _. Π(T, _. T)) := λ(f. λ(x. ﹫(f, x)))
 
 (* This is typed in the following way. First, we verify that the given type is well-typed,
-   and then check the term given after the ":=" with the given type.
+   and then check the term given after the ":=" with the given type. It this succeds, then
+   internally we add the name church1 to the signature as a positive symbol, along with an
+   rewrite rule allowing to unfold chuch1 into its definition.
 
    When a term is inferable, we can omit the type anotation.
 *)
@@ -127,7 +176,10 @@ rew ﹫₂(λ₂($T, x. $t(x)), $u) --> $t($u)
 
 (* Note that there are some mode annotations missing. By default, a non-annotated
    symbol has mode +, and a non-annotated argument has mode -, so we don't need to
-   write them every time.
+   write them every time. This choice is justified by the following resoning: a
+   symbol declaration in a logical framework with no support for such mode annotations,
+   such as Dedukti, can be understood in CompLF as a declaration of a positive symbol
+   in which every argument is negative.
 
    Now that λ₂ is a positive symbol, in can be infered, and hence we can define
    the terms infer_lam and redex that would have been rejected.
@@ -200,6 +252,7 @@ let trans : Tm Π(U, a. Π(El(a), x. Π(El(a), y. Π(El(a), z.
 let transp : Tm Π(U, a. Π(U, b. Π(Eq(U, a, b), _. Π(El(a), _. El(b)))))
     := λ(a. λ(b. λ(p. λ(x. J(p, z q. El(z), x)))))
 type transp
+
 
 (* We can then add natural numbers, along with a code for it in U *)
 
