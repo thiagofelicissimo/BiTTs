@@ -3,10 +3,10 @@
 
 (* In this file I will showcase how CompLF can be used through an example: we will see
    how to define a version of Martin-Lof's Type Theory. This file is intended to be a quick
-   introduction in which I don't explain everythin --- see intro.complf for a full introduction.
+   introduction in which I don't explain everything --- see intro.complf for a full introduction.
 
-   The first building block of a theory is its judgment forms. In MLTT there are two
-   of such: "t : A" asserts that t is a term of type A, and "A type" asserts that A
+   The first building block of a theory are its judgment forms. In MLTT there are two
+   judgment forms: "t : A" asserts that t is a term of type A, and "A type" asserts that A
    is a type. In CompLF we represent judgment forms by the framework's type-level
    symbols:
 *)
@@ -38,14 +38,14 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
     and the enclosing tokens (here represented generically by "[" and "]"), are one of
     the following:
 
-    - Arguments between {..} are called erased arguments. This means that each time we
-    write a term headed by λ, we only write λ(x. t), and therefore the arguments A and B
-    are omitted from the syntax.
+    - Arguments between {..} are called erased arguments and are ommited from the syntax.
+    For instance, because A and B are marked as erased, when writing a term headed by λ
+    we only write λ(x. t).
 
     - Arguments between (..)+ are arguments that are typed in infer mode when typing the
     symbol. This means that when a term is given at this argument, it should be able to
-    synthesize a type (as we will discuss later, the terms that can synthesize a type are
-    variables and terms headed by symbols defined with symbol+).
+    synthesize a type (the terms that can synthesize a type are variables and terms
+    headed by symbols defined with symbol+).
 
     - Arguments between (..)- are arguments that are typed in check mode when typing the
     symbol. This means that they do not need to be able to synthesize a type, as they are
@@ -67,7 +67,7 @@ rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 
 (*  The commands symbol and rew are used to define the theory we work in, and therefore
     they do not do any form of checking. It is the responsibility of the user to make
-    sure that the symbols that he defines make sense, and that the rewrite rules are
+    sure that the symbols that they define make sense, and that the rewrite rules are
     confluent and preserve typing. Instead, it is the terms written inside of the
     theory that can be typed by CompLF's bidirectional typing algorithm. Let us look
     at some examples.
@@ -129,8 +129,8 @@ rew ﹫₂(λ₂($T, x. $t(x)), $u) --> $t($u)
    symbol has mode +, and a non-annotated argument has mode -, so we don't need to
    write them every time.
 
-   Now that λ₂ is a positive symbol, in can be inferred, and hence we can define
-   the terms infer_lam and redex that would have been rejected.
+   Now that λ₂ is a positive symbol, in can be inferred, and hence the following
+   commands succed.
 *)
 
 let infer_lam := λ₂(Π₂(T, _. T), f. λ₂(T, x. ﹫₂(f, x)))
@@ -201,7 +201,7 @@ let transp : Tm Π(U, a. Π(U, b. Π(Eq(U, a, b), _. Π(El(a), _. El(b)))))
     := λ(a. λ(b. λ(p. λ(x. J(p, z q. El(z), x)))))
 type transp
 
-(* We can then add natural numbers, along with a code for it in U *)
+(* We can then add natural numbers, along with a code for them in U *)
 
 symbol ℕ : Ty
 symbol 0 : Tm ℕ

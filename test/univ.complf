@@ -18,6 +18,9 @@ rew lmax(lsucc($x), lsucc($y)) --> lsucc(lmax($x, $y))
 symbol U (_ : Lvl) : Ty
 symbol El {i : Lvl} (A : Tm U(i))+ : Ty
 
+symbol u (i : Lvl) : Tm U(lsucc(i))
+rew El(u($i)) --> U($i)
+
 (* Dependent products along with codes for U *)
 
 symbol Π (A : Ty) (B : (x : Tm A) Ty) : Ty
@@ -37,7 +40,7 @@ rew inst(Λ(i. $t(i)), $n) --> $t($n)
 
 (* polymorphic id funciton *)
 
-let id_poly : Tm ∀(i. Π(U(i), a. Π(El(a), _. El(a))))
+let id_poly : Tm ∀(i. El(π(lsucc(i), lmax(i,i), u(i), a. π(i, i, a, _. a))))
     := Λ(i. λ(a. λ(x. x)))
 
 type inst(id_poly, lzero)
