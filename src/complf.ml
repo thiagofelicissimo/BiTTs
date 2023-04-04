@@ -6,6 +6,13 @@ module L = Sedlexer
 module E = Eval
 
 
+let current_entry : C.entry option ref = ref None
+
+let report_error _ =
+  match !current_entry with
+  | None -> assert false
+  | Some entry -> Format.printf "Error while handling the entry@.%a" C.pp_entry entry
+
 let () =
   let input_files : string list ref = ref [] in
   let options = Arg.align [] in
@@ -17,6 +24,7 @@ let () =
       (*let prog = P.program L.token @@ Lexing.from_channel @@ open_in file in (*"test.thry"*) *)
       List.iter begin fun entry ->
         (*  Format.printf "%a" C.pp_entry entry;*)
+        current_entry := Some entry;
         match entry with
         | C.Tm_symb(name, mode, prems, ty) ->
           let symb = C.scope_tm_symb mode prems ty in
@@ -56,32 +64,43 @@ let () =
     end !input_files
   with
   | E.NotEqualValue(v, v', d) ->
+    report_error ();
     let tm = E.read_back_tm d v in
     let tm' = E.read_back_tm d v' in
     Format.printf "Equality check error: %a != %a@." T.pp_term tm T.pp_term tm'
   | E.NotEqualEnv(e, e', d) ->
+    report_error ();
     let e = E.read_back_sp d e in
     let e' = E.read_back_sp d e' in
     Format.printf "Equality check error: %a != %a@." T.pp_spine e T.pp_spine e'
   | E.NotEqualVTy(vty, vty', d) ->
+    report_error ();
     let ty = E.read_back_ty d vty in
     let ty' = E.read_back_ty d vty' in
     Format.printf "Equality check error: %a != %a@." T.pp_ty ty T.pp_ty ty'
   | E.NoMatchTm(t, v) ->
+    report_error ();
     let t' = E.read_back_tm 0 v in
     Format.printf "Matching error: %a !< %a@." T.pp_term t T.pp_term t'
   | E.NoMatchSp(e, env) ->
+    report_error ();
     let e' = E.read_back_sp 0 env in
     Format.printf "Matching error: %a !< %a@." T.pp_spine e T.pp_spine e'
   | E.NoMatchTy(ty, vty) ->
+    report_error ();
     let ty' = E.read_back_ty 0 vty in
     Format.printf "Matching error: %a !< %a@." T.pp_ty ty T.pp_ty ty'
   | Ty.NotInferable ->
+    report_error ();
     Format.printf "Typing error: A part of the term that should be inferable cannot synthetize a type@."
   | Ty.TypingLenghtMismatch ->
+    report_error ();
     Format.printf "Typing error: Some spine does not match the expected length of the corresponding symbol@."
   | L.SyntaxError(b, e) ->
     let l = b.Lexing.pos_lnum in
     let fc = b.pos_cnum - b.pos_bol + 1 in
     let lc = e.Lexing.pos_cnum - b.pos_bol + 1 in
     Format.printf "Syntax Error: line %d, characters %d-%d@." l fc lc
+  | Ty.SymbolNotDefined s ->
+    report_error ();
+    Format.printf "Typing Error: The name %s is not defined@." s

@@ -24,25 +24,32 @@ let lookup_ty (gamma : vctx) (n : int) : vty =
 
 exception NotInferable
 exception TypingLenghtMismatch
+exception SymbolNotDefined of string
 
 let typing_err_mes = false
 
-let expect_tm_symb symb : tm_symb =
-  match symb with
-  | Tm_symb(symb) -> symb
-  | _ -> failwith "type level constant appears as head of term"
+let get_tm_symb str : tm_symb =
+  try
+    let symb = SignTbl.find str !sign in
+    match symb with
+    | Tm_symb(symb) -> symb
+    | _ -> failwith "type level constant appears as head of term"
+  with Not_found -> raise (SymbolNotDefined(str))
 
-let expect_ty_symb symb : ty_symb =
-  match symb with
-  | Ty_symb(symb) -> symb
-  | _ -> failwith "term level constant appears as head of type"
+let get_ty_symb str : ty_symb =
+  try
+    let symb = SignTbl.find str !sign in
+    match symb with
+    | Ty_symb(symb) -> symb
+    | _ -> failwith "term level constant appears as head of type"
+  with Not_found -> raise (SymbolNotDefined(str))
 
 let rec infer (gamma : vctx) (tm : term) : vty =
   if typing_err_mes then Format.printf "%a |- %a => ?@." pp_vctx gamma pp_term tm;
   match tm.head with
   | Ix(n) -> lookup_ty gamma n
   | Symb(str) ->
-    let symb = expect_tm_symb @@ SignTbl.find str !sign in
+    let symb = get_tm_symb str in
     begin match symb.mode with
       | Pos ->
         let env = type_spine gamma [] symb.prems tm.spine in
@@ -56,7 +63,7 @@ and check (gamma : vctx) (tm : term) (vty : vty) : unit =
   | Ix(_) ->
     let vty' = infer gamma tm in equal_vty vty vty' (List.length gamma)
   | Symb(str) ->
-    let symb = expect_tm_symb @@ SignTbl.find str !sign in
+    let symb = get_tm_symb str in
     begin match symb.mode with
       | Pos ->
         let vty' = infer gamma tm in equal_vty vty vty' (List.length gamma)
@@ -68,7 +75,7 @@ and check (gamma : vctx) (tm : term) (vty : vty) : unit =
 
 and check_type (gamma : vctx) (ty : ty) : unit =
   if typing_err_mes then Format.printf "%a |- %a <=> * @." pp_vctx gamma pp_ty ty;
-  let symb = expect_ty_symb @@ SignTbl.find ty.ty_cst !sign in
+  let symb = get_ty_symb ty.ty_cst in
   ignore @@ type_spine gamma [] symb.prems ty.ty_spine
 
 and type_spine (gamma : vctx) (prevals : env) (prems : prem list) (e : spine) : env =
