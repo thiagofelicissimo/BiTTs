@@ -71,7 +71,7 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
     are not syntactically well-formed.
 
     Now let us get back to the example. In order to finish the definition of dependent products
-    we still need to add its associated computational rule. This is done in the following
+    we still need to add its associated computation rule. This is done in the following
     declaration, where the free variables of the rewrite rule are prefixed with "$".
 *)
 
@@ -95,7 +95,9 @@ symbol T : Ty
 let church1 : Tm Π(Π(T, _. T), _. Π(T, _. T)) := λ(f. λ(x. ﹫(f, x)))
 
 (* This is typed in the following way. First, we verify that the given type is well-typed,
-   and then check the term given after the ":=" with the given type.
+   and then check the term given after the ":=" against the given type. It this succeeds, then
+   internally we add the name church1 to the signature as a positive symbol, along with an
+   rewrite rule allowing to unfold church1 into its definition.
 
    When a term is inferable, we can omit the type annotation.
 *)
@@ -113,7 +115,7 @@ eval ﹫(church1, λ(x.x))
 
 (* The following declaration would raise the error "Typing error: A part of the term that
    should be inferable cannot synthesize a type". Indeed, because we are omitting the
-   typing annotation, the term should be inferable, however λ is a negative symbol,
+   type annotation, the term should be inferable, however λ is a negative symbol,
    and thus can only be typed in check mode.
 *)
 (* let infer_lam := λ(f. λ(x. ﹫(f, x))) *)
