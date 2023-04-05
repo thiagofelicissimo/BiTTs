@@ -105,6 +105,11 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
     is fully applied to the variables in its local context, and the symbols that appear in it
     should not be the head of rewrite rules and neither contain erased arguments on their type.
 
+    Finally, note that when writing terms, symbols have to be fully applied to their arguments,
+    which are enclosed by (..), and each argument should bind the correct number of variables.
+    For instance, "Π(A, x.B)" is a valid term, but "Π(A)", "Π(A, B)", "Π A (x. B)" or "Π A B"
+    are not syntactically well-formed
+
     Now let us get back to the example. In order to finish the definition of dependent products
     we still need to add its associated computational rule. This is done in the following
     declaration, where the free variables of the rewrite rule are prefixed with "$".
@@ -208,12 +213,22 @@ rew π₁(mkΣ($t, $u)) --> $t
 
 rew π₂(mkΣ($t, $u)) --> $u
 
+(* Recall from MLTT that a Tarski-style universe is a type U containing codes for other types,
+   along with a decoding function El mapping such codes to the types that they correspond to *)
+
 symbol U : Ty
 
 symbol El (A : Tm U) : Ty
 
+(* For instance, we can add a code for dependent products in U *)
+
 symbol π (a : Tm U) (b : (_ : Tm El(a)) Tm U) : Tm U
+
+(* And a rule saying that El decodes it to the dependent product type, as expected *)
+
 rew El(π($a, x.$b(x))) --> Π(El($a), x. El($b(x)))
+
+(* And we can do the same for dependent sums *)
 
 symbol σ (a : Tm U) (b : (_ : Tm El(a)) Tm U) : Tm U
 rew El(σ($a, x.$b(x))) --> Σ(El($a), x. El($b(x)))

@@ -18,8 +18,12 @@ symbol Tm (A : Ty) : *
 (*  A type-level symbol declaration consists of a name for the symbol, along with a list
     of arguments it takes, and at the end the token * signals that this symbol is type-level.
 
-    We can now write "A : Ty" to represent the judgment form "A type", and "t : Tm A"
-    to represent the judgment form "t : A".
+    From now on, wheneaver we write "A : Ty" you should read it as MLTT's judgment form
+    "A type" and wheneaver we write "t : Tm A" you should read it as MLTT's "t : A".
+    Note that here we are allowed to write "Tm A" instead of "Tm(A)": type-level symbols
+    with only one argument have a special case in the parser in order to help make the
+    notation lighter. Also note that when we write "A : Ty", even if A represents a type of
+    MLTT, it is not a type of the framework, but a term of type Ty.
 
     Now that we have the basic building blocks of MLTT, we can start the interesting part:
     adding type formers. The first types I'll add are of course the dependent products.
@@ -33,7 +37,9 @@ symbol- λ {A : Ty} {B : (_ : Tm A) Ty} (t : (x : Tm A) Tm B(x))- : Tm Π(A, x. 
 
 symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : Tm B(u)
 
-(*  Term-level symbols are declared with a list of arguments, each one of the form
+(*  There's a lot of new syntax, so let me explain it all before moving on.
+
+    Term-level symbols are declared with a list of arguments, each one of the form
     "[x : (x1 : T1, ..., xk : Tk) T]", where T1..Tk and T are types of the framework,
     and the enclosing tokens (here represented generically by "[" and "]"), are one of
     the following:
@@ -58,6 +64,11 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
     against to recover some of its erased arguments. This is the case of λ, which
     recovers A and B from the given type.
 
+    Finally, note that when writing terms, symbols have to be fully applied to their arguments,
+    which are enclosed by (..), and each argument should bind the correct number of variables.
+    For instance, "Π(A, x.B)" is a valid term, but "Π(A)", "Π(A, B)", "Π A (x. B)" or "Π A B"
+    are not syntactically well-formed.
+
     Now let us get back to the example. In order to finish the definition of dependent products
     we still need to add its associated computational rule. This is done in the following
     declaration, where the free variables of the rewrite rule are prefixed with "$".
@@ -78,7 +89,7 @@ rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 symbol T : Ty
 
 (* We can make definitions by using the following syntax. The following is the definition
-   of the church numeral 1.
+   of the church numeral 1. Note that I write _ for a variable that is not used.
 *)
 let church1 : Tm Π(Π(T, _. T), _. Π(T, _. T)) := λ(f. λ(x. ﹫(f, x)))
 
@@ -156,14 +167,25 @@ rew π₁(mkΣ($t, $u)) --> $t
 
 rew π₂(mkΣ($t, $u)) --> $u
 
+(* Recall from MLTT that a Tarski-style universe is a type U containing codes for other types,
+   along with a decoding function El mapping such codes to the types that they correspond to *)
+
 symbol U : Ty
 
 symbol El (A : Tm U) : Ty
 
+(* For instance, we can add a code for dependent products in U *)
+
 symbol π (a : Tm U) (b : (_ : Tm El(a)) Tm U) : Tm U
+
+(* And a rule saying that El decodes it to the dependent product type, as expected *)
+
 rew El(π($a, x.$b(x))) --> Π(El($a), x. El($b(x)))
 
+(* And we can do the same for dependent sums *)
+
 symbol σ (a : Tm U) (b : (_ : Tm El(a)) Tm U) : Tm U
+
 rew El(σ($a, x.$b(x))) --> Σ(El($a), x. El($b(x)))
 
 (* As an example, we can write the "axiom of choice". Note that thanks to the erased arguments,
