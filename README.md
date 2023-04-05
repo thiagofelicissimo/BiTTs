@@ -8,7 +8,7 @@ CompLF is a logical framework suitable for defining computational theories (whos
 
 Because of erased arguments, typing a term in CompLF is a non-trivial and in general undecidable task. To address this problem, I have designed a theory-agnostic bidirectional typing algorithm for CompLF which can be instantiated by giving modes to a CompLF theory in a "mode-correct" way. Bidirectional typing complements erased arguments very well, as it allows to specify the flow of typing information in a way that makes such arguments redundant, hence eliminating the need to have them in the syntax.
 
-Finally, unlike most frameworks but similarly to Canonical LF, in CompLF there is no meta-level beta-reduction or eta-expansion. Instead, the well-formed raw terms of CompLF would correspond to the beta-normal eta-long forms (also called *canonical forms*) of a regular type theory. This allows for a more faithful representation of syntax because the non canonical forms don't correspond to any terms in the object theory (hence they are normally quotiented out when establishing adequacy). Instead, in CompLF the meaningful raw terms are exactly the ones that the user can write.
+Finally, unlike most frameworks but similarly to Canonical LF, in CompLF there is no meta-level beta-reduction or eta-expansion. Instead, the well-formed raw terms of CompLF would correspond to the beta-normal eta-long forms (also called *canonical forms*) of a regular type theory. This allows for a more faithful representation of syntax because the non canonical forms don't correspond to any terms in the object theory (hence they are normally quotiented out when establishing adequacy). Instead, in CompLF the meaningful terms are exactly the ones that the user can write.
  
 ## How to use
 
