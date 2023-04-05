@@ -3,7 +3,8 @@
 
 (* In this file I will showcase how CompLF can be used through an example: we will see
    how to define a version of Martin-Lof's Type Theory. This file is intended to be a quick
-   introduction in which I don't explain everything --- see intro.complf for a full introduction.
+   introduction in which I don't explain everything, so if something is not sufficiently clear
+   here I'd suggest taking a look at intro.complf for a full introduction.
 
    The first building block of a theory are its judgment forms. In MLTT there are two
    judgment forms: "t : A" asserts that t is a term of type A, and "A type" asserts that A

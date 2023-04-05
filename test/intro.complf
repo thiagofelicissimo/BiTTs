@@ -43,12 +43,12 @@ symbol Tm (A : Ty) : *
     of arguments it takes, and at the end the token * signals that this symbol is type-level.
     I will better explain the syntax of arguments later.
 
-    We can now write "A : Ty" to represent the judgment form "A type", and "t : Tm A"
-    to represent the judgment form "t : A". Note that here we are allowed to write "Tm A"
-    instead of "Tm(A)": type-level symbols with only one argument have a special case in
-    the parser in order to help make the notation lighter. Note that when we write
-    "A : Ty", even if A represents a type of MLTT, it is not a type of the framework, but
-    a term of type Ty.
+    From now on, wheneaver we write "A : Ty" you should read it as MLTT's judgment form
+    "A type" and wheneaver we write "t : Tm A" you should read it as MLTT's "t : A".
+    Note that here we are allowed to write "Tm A" instead of "Tm(A)": type-level symbols
+    with only one argument have a special case in the parser in order to help make the
+    notation lighter. Also note that when we write "A : Ty", even if A represents a type of
+    MLTT, it is not a type of the framework, but a term of type Ty.
 
     Now that we have the basic building blocks of MLTT, we can start the interesting part:
     adding type formers. The first types I'll add are of course the dependent products.
