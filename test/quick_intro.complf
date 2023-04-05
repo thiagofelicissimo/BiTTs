@@ -56,7 +56,7 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
 
     - Arguments between (..)- are arguments that are typed in check mode when typing the
     symbol. This means that they do not need to be able to synthesize a type, as they are
-    given a type to check against.
+    given a type to check again.
 
     Moreover, term-level symbols are accompanied by a mode annotation. For instance, Π
     is declared with symbol+, which means that Π can synthesize its type and hence can
@@ -95,7 +95,7 @@ symbol T : Ty
 let church1 : Tm Π(Π(T, _. T), _. Π(T, _. T)) := λ(f. λ(x. ﹫(f, x)))
 
 (* This is typed in the following way. First, we verify that the given type is well-typed,
-   and then check the term given after the ":=" against the given type. It this succeeds, then
+   and then check the term given after the ":=" against the given type. If this succeeds, then
    internally we add the name church1 to the signature as a positive symbol, along with an
    rewrite rule allowing to unfold church1 into its definition.
 
@@ -144,7 +144,7 @@ rew ﹫₂(λ₂($T, x. $t(x)), $u) --> $t($u)
    write them every time.
 
    Now that λ₂ is a positive symbol, in can be inferred, and hence the following
-   commands succed.
+   commands succeed.
 *)
 
 let infer_lam := λ₂(Π₂(T, _. T), f. λ₂(T, x. ﹫₂(f, x)))
