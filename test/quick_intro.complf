@@ -80,9 +80,9 @@ rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 (*  The commands symbol and rew are used to define the theory we work in, and therefore
     they do not do any form of checking. It is the responsibility of the user to make
     sure that the symbols that they define make sense, and that the rewrite rules are
-    confluent and preserve typing. Instead, it is the terms written inside of the
-    theory that can be typed by CompLF's bidirectional typing algorithm. Let us look
-    at some examples.
+    confluent and preserve typing, as these properties are in general undecidable.
+    Instead, it is the terms written inside of the theory that can be typed by
+    CompLF's bidirectional typing algorithm. Let us look at some examples.
 
     We first pose an auxiliary unspecified type.
 *)
@@ -95,7 +95,7 @@ symbol T : Ty
 let church1 : Tm Π(Π(T, _. T), _. Π(T, _. T)) := λ(f. λ(x. ﹫(f, x)))
 
 (* This is typed in the following way. First, we verify that the given type is well-typed,
-   and then check the term given after the ":=" against the given type. It this succeeds, then
+   and then check the term given after the ":=" against the given type. If this succeeds, then
    internally we add the name church1 to the signature as a positive symbol, along with an
    rewrite rule allowing to unfold church1 into its definition.
 
@@ -144,7 +144,7 @@ rew ﹫₂(λ₂($T, x. $t(x)), $u) --> $t($u)
    write them every time.
 
    Now that λ₂ is a positive symbol, in can be inferred, and hence the following
-   commands succed.
+   commands succeed.
 *)
 
 let infer_lam := λ₂(Π₂(T, _. T), f. λ₂(T, x. ﹫₂(f, x)))
@@ -232,12 +232,13 @@ symbol ℕ : Ty
 symbol 0 : Tm ℕ
 symbol S (_ : Tm ℕ) : Tm ℕ
 
-symbol+ ℕ_ind (P : (_ : Tm ℕ) Ty)-
-              (p0 : Tm P(0))-
-              (ps : (n : Tm ℕ, pn : Tm P(n)) Tm P(S(n)))-
-              (n : Tm ℕ)-
+symbol+ ℕ_ind (P : (_ : Tm ℕ) Ty)
+              (p0 : Tm P(0))
+              (ps : (n : Tm ℕ, pn : Tm P(n)) Tm P(S(n)))
+              (n : Tm ℕ)
               (* ------------ *)
               : Tm P(n)
+
 rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), 0) --> $p0
 rew ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), S($n)) -->
     $ps($n, ℕ_ind(x. $P(x), $p0, n pn. $ps(n, pn), $n))
@@ -281,7 +282,7 @@ let 8 := S(S(S(S(4))))
 let pair : Tm Σ(ℕ, x. Eq(ℕ, x, x)) := mkΣ(6, refl)
 let pair2 : Tm Σ(ℕ, x. Eq(ℕ, 6, x)) := mkΣ(6, refl)
 
-(* Let us now define lists with a code in U for them *)
+(* Let us now define lists, along with a code in U for them *)
 
 symbol List (A : Ty) : Ty
 symbol- nil {A : Ty} : Tm List(A)
@@ -292,6 +293,7 @@ symbol ind_List {A : Ty}
               (P : (_ : Tm List(A)) Ty)
               (l_nil : Tm P(nil))
               (l_cons : (a : Tm A, l : Tm List(A), pl : Tm P(l)) Tm P(cons(a, l)))
+              (* -------------- *)
               : Tm P(l)
 
 rew ind_List(nil, l. $P(l), $p_nil, a l pl. $p_cons(a, l, pl)) --> $p_nil
@@ -309,8 +311,8 @@ let hdℕ : Tm Π(List(ℕ), _. ℕ) (* returns 0 if l = nil *)
 let tlℕ : Tm Π(List(ℕ), _. List(ℕ)) (* returns nil if l = nil *)
     := λ(l. ind_List(l, _. List(ℕ), nil, x l2 pl. l2))
 
-let 321 : Tm List(ℕ) := cons(3, cons(2, cons(1, nil)))
-eval 321
-eval ﹫(hdℕ, 321)
-eval ﹫(hdℕ, nil)
-eval ﹫(tlℕ, 321)
+let 3∶2∶1 : Tm List(ℕ) := cons(3, cons(2, cons(1, nil)))
+eval 3∶2∶1
+eval ﹫(hdℕ, 3∶2∶1)
+eval ﹫(hdℕ, 3∶2∶1)
+eval ﹫(tlℕ, 3∶2∶1)
