@@ -60,7 +60,7 @@ entry:
   | SYMBOL id=IDENT prems=list(prem) COLON ty=ty
     { Tm_symb(id, Pos, List.rev prems, ty) }
   | SYMBOL id=IDENT prems=list(prem) COLON STAR
-    { Ty_symb(id, prems)}
+    { Ty_symb(id, List.rev prems)}
   | REW lhs=term REDUCES rhs=term
     { Rew(lhs, rhs) }
   | LET id=IDENT COLON ty=ty DEF tm=term
