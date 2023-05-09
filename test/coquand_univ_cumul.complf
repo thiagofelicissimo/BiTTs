@@ -1,0 +1,56 @@
+
+
+(* Cumulative Coquand-style universes *)
+
+symbol Lvl : *
+symbol lzero : Lvl
+symbol lsucc (_ : Lvl) : Lvl
+
+symbol Ty (l : Lvl) : *
+symbol Tm (l : Lvl) (A : Ty l) : *
+
+symbol U (l : Lvl) : Ty lsucc(l)
+
+(* Tm U(l) ≃ Ty l *)
+symbol el {l : Lvl} (t : Tm (lsucc(l), U(l)))+ : Ty l
+symbol- code {l : Lvl} (A : Ty l) : Tm (lsucc(l), U(l))
+rew el(code($A)) --> $A
+rew code(el($t)) --> $t
+
+
+symbol ↑ (l : Lvl) (A : Ty l) : Ty lsucc(l)
+
+(* Tm ↑(A) ≃ Tm A *)
+symbol- box {l : Lvl} {A : Ty l} (t : Tm (l, A)) : Tm (lsucc(l), ↑(l, A))
+symbol unbox {l : Lvl} {A : Ty l} (t : Tm(lsucc(l), ↑(l, A)))+ : Tm(l, A)
+rew box(unbox($t)) --> $t
+rew unbox(box($t)) --> $t
+
+(* because in the declarations for λ and ﹫ the symbol Π appears in a type that is used to recover
+   erased arguments, at the moment we cannot mark the first argument (l : Lvl) as erased without
+   invalidating the conditions we assume when proving correctness of the algorithm. however,
+   handling such cases does not seem infeasible, but would porabably render the proofs
+   considerably more complicated *)
+symbol Π (l : Lvl) (A : Ty l) (B : (x : Tm (l, A)) Ty l) : Ty l
+symbol- λ {l : Lvl} {A : Ty l} {B : (_ : Tm (l, A)) Ty l} (t : (x : Tm (l, A)) Tm (l, B(x)))
+        : Tm (l, Π(l, A, x. B(x)))
+symbol ﹫ {l : Lvl} {A : Ty l} {B : (_ : Tm (l, A)) Ty l} (t : Tm (l, Π(l, A, x. B(x))))+ (u : Tm (l, A))
+       : Tm (l, B(u))
+
+rew ﹫(λ(x. $t(x)), $u) --> $t($u)
+
+
+symbol Tyω : *
+symbol Tmω (A : Tyω) : *
+
+symbol ∀ (l : (i : Lvl) Lvl) (A : (i : Lvl) Ty l(i)) : Tyω
+symbol- Λ {l : (i : Lvl) Lvl} {A : (i : Lvl) Ty l(i)} (t : (i : Lvl) Tm(l(i), A(i))) : Tmω ∀(i. l(i), i. A(i))
+symbol inst {l : (i : Lvl) Lvl} {A : (i : Lvl) Ty l(i)} (t : Tmω ∀(i. l(i), i. A(i)))+ (l' : Lvl) : Tm(l(l'), A(l'))
+
+rew inst(Λ(i. $t(i)), $l) --> $t($l)
+
+let id_poly : Tmω ∀(i. lsucc(i), i. Π(lsucc(i), U(i), a. Π(lsucc(i), ↑(i, el(a)), _. ↑(i, el(a)))))
+    :=  Λ(i. λ(a. λ(x. x)))
+
+type inst(id_poly, lzero)
+eval inst(id_poly, lzero)

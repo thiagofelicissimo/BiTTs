@@ -14,7 +14,7 @@ symbol ﹫ {A : Ty} {B : Ty} (t : Tm →(A, B))+ (u : Tm A) : Tm B
 rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 
 symbol  ∀ (A : Ty) (P : (x : Tm A) Tm prop) : Tm prop
-symbol- in∀ {A : Ty} {P : (x : Tm A) Tm prop} (t : (x : A) Prf P(x)) : Prf ∀(A, x. P(x))
+symbol- in∀ {A : Ty} {P : (x : Tm A) Tm prop} (t : (x : Tm A) Prf P(x)) : Prf ∀(A, x. P(x))
 symbol  el∀ {A : Ty} {P : (x : Tm A) Tm prop} (t : Prf ∀(A, x. P(x)))+ (u : Tm A) : Prf P(u)
 rew el∀(in∀(x. $p(x)), $t) --> $p($t)
 
@@ -30,3 +30,15 @@ type P⇒P
 let K : Prf ∀(prop, P. ∀(prop, Q. ⇒(P, ⇒(Q, P))))
     := in∀(P. in∀(Q. in⇒(p. in⇒(q. p))))
 type K
+
+let ∧ : Tm →(prop, →(prop, prop))
+    := λ(p. λ(q. ∀(prop, r. ⇒(⇒(p, ⇒(q, r)), r))))
+
+let in∧ : Prf ∀(prop, P. ∀(prop, Q. ⇒(P, ⇒(Q, ﹫(﹫(∧, P), Q)))))
+    := in∀(P. in∀(Q. in⇒(p. in⇒(q. in∀(R. in⇒(ϕ. el⇒(el⇒(ϕ, p), q)))))))
+
+let el1∧ : Prf ∀(prop, P. ∀(prop, Q. ⇒(﹫(﹫(∧, P), Q), P)))
+    := in∀(P. in∀(Q. in⇒(pq. el⇒(el∀(pq, P), in⇒(x. in⇒(y. x))))))
+
+let el2∧ : Prf ∀(prop, P. ∀(prop, Q. ⇒(﹫(﹫(∧, P), Q), Q)))
+    := in∀(P. in∀(Q. in⇒(pq. el⇒(el∀(pq, Q), in⇒(x. in⇒(y. y))))))

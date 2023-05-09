@@ -100,10 +100,12 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
     of this, they can use the type they check against to recover some of its erased arguments.
     This is the case of λ, which recovers A and B from the given type.
 
-    What does it mean for an argument to be recoverable from a type? We will not detail all
-    of the requirements, but roughly the type should be a pattern, in which every free variable
-    is fully applied to the variables in its local context, and the symbols that appear in it
-    should not be the head of rewrite rules and neither contain erased arguments on their type.
+    What does it mean for an argument to be recoverable from a type T? We will not say all
+    the details, but roughly:
+    1) T should be a pattern
+    2) each free variable appears fully applied to the bound variables in scope
+    3) if a constant c occurs in T, then its entry in the signature has no erased arguments,
+       and moreover c is not the head of any rewrite rule
 
     Finally, note that when writing terms, symbols have to be fully applied to their arguments,
     which are enclosed by (..), and each argument should bind the correct number of variables.

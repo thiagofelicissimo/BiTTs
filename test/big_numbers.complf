@@ -31,7 +31,7 @@ let 1 := S(0)
 let 2 := S(S(0))
 let 3 := S(S(S(0)))
 let 6 := ﹫(﹫(＋, 3), 3)
-let 8 := S(S(6))
+let 8 := S(S(S(S(S(S(S(S(0))))))))
 
 (* fact 8 = 40320 *)
 eval ﹫(fact, 8) (* in my machine, takes around 1.5s *)
