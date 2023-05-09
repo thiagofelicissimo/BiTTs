@@ -46,6 +46,8 @@ rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 symbol π {i : Lvl} (a : Tm U(i))+ (b : (_ : Tm El(a)) Tm U(i)) : Tm U(i)
 rew El(π($a, x.$b(x))) --> Π(El($a), x. El($b(x)))
 
+rew ↑(π($a, x.$b(x))) --> π(↑($a), x.↑($b(x)))
+
 
 (* polymorphic id *)
 let id_poly : Tm ∀(i. El(π(u(i), a. ↑(π(a, _. a)))))
@@ -71,6 +73,7 @@ rew π₂(mkΣ($t, $u)) --> $u
 symbol σ {i : Lvl} (a : Tm U(i))+ (b : (_ : Tm El(a)) Tm U(i)) : Tm U(i)
 rew El(σ($a, x.$b(x))) --> Σ(El($a), x. El($b(x)))
 
+rew ↑(σ($a, x.$b(x))) --> σ(↑($a), x.↑($b(x)))
 
 (* Equality type *)
 symbol Eq (A : Ty) (t : Tm A) (u : Tm A) : Ty
@@ -85,3 +88,5 @@ rew J(refl, x y. $P(x, y), $prefl) --> $prefl
 (* code in U for Eq *)
 symbol eq {i : Lvl} (a : Tm U(i))+ (x : Tm El(a)) (y : Tm El(a)) : Tm U(i)
 rew El(eq($a, $x, $y)) --> Eq(El($a), $x, $y)
+
+rew ↑(eq($a, $t, $u)) --> eq(↑($a), $t, $u)
