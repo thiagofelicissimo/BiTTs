@@ -2,8 +2,10 @@
 (* INTRODUCTION TO COMPLF *)
 
 (* In this file I will showcase how CompLF can be used through an example: we will see
-   how to define a version of Martin-Lof's Type Theory. The explanations are sometimes quite
-   long, so if you want something shorter read instead "quick_intro.complf".
+   how to define a version of Martin-Lof's Type Theory. The explanations are sometimes
+   long, so if you want something shorter read instead "quick-intro.complf". Still, this is
+   in no way a precise description of CompLF and its algorithm. This is the subject of an article
+   currently in preparation.
 
    Before starting, let me explain a bit the raw syntax of CompLF. A term is an
    expression of the form "c(𝐭)" or "x(𝐭)" where x is a variable, c is a term-level symbol

@@ -45,7 +45,7 @@ symbol+ ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A)- : 
     and the enclosing tokens (here represented generically by "[" and "]"), are one of
     the following:
 
-    - Arguments between {..} are called erased arguments and are ommited from the syntax.
+    - Arguments between {..} are called erased arguments and are omitted from the syntax.
     For instance, because A and B are marked as erased, when writing a term headed by λ
     we only write λ(x. t).
 

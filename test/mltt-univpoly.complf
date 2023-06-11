@@ -1,5 +1,5 @@
 
-(* AGDA-STYLE UNIVERSE POLYMORPHISM *)
+(* MLTT with Tarski-style universes and universe polymorphism *)
 
 symbol Ty : *
 symbol Tm (A : Ty) : *
@@ -28,6 +28,12 @@ symbol- λ {A : Ty} {B : (_ : Tm A) Ty} (t : (x : Tm A) Tm B(x)) : Tm Π(A, x. B
 symbol ﹫ {A : Ty} {B : (_ : Tm A) Ty} (t : Tm Π(A, x. B(x)))+ (u : Tm A) : Tm B(u)
 rew ﹫(λ(x. $t(x)), $u) --> $t($u)
 
+(* we would like to omit the annotations i and j. we could recover the i from the type of a,
+   however the argument j cannot be recovered from the type of b. indeed, we require our patterns
+   to be fully applied, however Tm(U(j)) is not a fully applied pattern, because j is not applied to
+   the local variable x. the requirement for patterns to be fully applied allows us to avoid in the
+   proof of soundness of the algorithm the use of straightening, a principle that is not
+   always satisfied by CompLF theories.  *)
 symbol π (i : Lvl) (j : Lvl) (A : Tm U(i)) (B : (x : Tm El(A)) Tm U(j)) : Tm U(lmax(i, j))
 rew El(π($i, $j, $A, x. $B(x))) --> Π(El($A), x. El($B(x)))
 
