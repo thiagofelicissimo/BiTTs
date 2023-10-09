@@ -8,7 +8,10 @@ let keyword_or_ident =
   let h = Hashtbl.create 17 in
   List.iter (fun (s, k) -> Hashtbl.add h s k)
     [   "symbol", SYMBOL;
-        "rew", REW;
+        "rewrite", REW;
+        "constructor", CONS;
+        "destructor", DEST;
+        "sort", SORT;
         "let", LET;
         "type", TYPE;
         "eval", EVAL
