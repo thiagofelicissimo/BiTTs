@@ -22,8 +22,10 @@
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends
-   ocaml
-   dune)
+   (ocaml (>= 4.13.1))
+   (dune (>= 3.3))
+   (sedlex (>= 2.5))
+   (menhir (>= 20220210)))
  (tags
   (topics "to describe" your project)))
 
