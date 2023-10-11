@@ -1,6 +1,6 @@
 (lang dune 3.3)
 
-(name complf)
+(name bitt)
 
 (using menhir 2.1)
 
@@ -18,7 +18,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name complf)
+ (name bitt)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends

@@ -7,13 +7,12 @@ exception Lexing_error
 let keyword_or_ident =
   let h = Hashtbl.create 17 in
   List.iter (fun (s, k) -> Hashtbl.add h s k)
-    [   "symbol", SYMBOL;
-        "rewrite", REW;
+    [   "rewrite", REW;
         "constructor", CONS;
         "destructor", DEST;
         "sort", SORT;
         "let", LET;
-        "type", TYPE;
+        "check", CHECK;
         "eval", EVAL
     ] ;
   fun s ->
@@ -32,9 +31,7 @@ let rec token lb =
   | space -> token lb
   | "(*" -> comment token 0 lb
   | "(" -> LPAR
-  | ")" -> RPAR
-  | ")+" -> RPAR_POS
-  | ")-" -> RPAR_NEG
+  | ")" -> RPAR  
   | "{"  -> LBRACK
   | "}"  -> RBRACK
   | ":" -> COLON
@@ -42,9 +39,7 @@ let rec token lb =
   | "," -> COMMA
   | "-->" -> REDUCES
   | ":=" -> DEF
-  | "*" -> STAR
-  | "+" -> PLUS
-  | "-" -> MINUS
+  | "=" -> EQUAL
   | name -> keyword_or_ident (Utf8.lexeme lb)
   | _ -> raise Lexing_error
 and comment next i lb =

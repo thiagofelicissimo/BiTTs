@@ -1,0 +1,46 @@
+
+sort Ty ()
+sort Tm (A : Ty)
+
+(* Dependent products *)
+constructor Π () (A : Ty, B{x : Tm(A)} : Ty) : Ty
+constructor λ   (A : Ty, B{x : Tm(A)} : Ty) 
+                (t{x : Tm(A)} : Tm(B{x})) 
+                : Tm(Π(A, x. B{x}))
+destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty) 
+                (t : Tm(Π(A, x. B{x})))
+                (u : Tm(A))
+                : Tm(B{u})
+
+rewrite ﹫(λ(x. t{x}), u) --> t{u}
+
+
+(* Natural numbers *)
+constructor ℕ () () : Ty
+constructor 0 () () : Tm(ℕ)
+constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
+
+destructor ℕ_ind    ()
+                    (n : Tm(ℕ))
+                    (P {x : Tm(ℕ)} : Ty, 
+                     p0 : Tm(P{0}), 
+                     ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}))
+                (* ------------ *)
+                    : Tm(P{n})
+
+rewrite ℕ_ind(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+rewrite ℕ_ind(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
+    ps{n, ℕ_ind(n, x. P{x}, p0, n pn. ps{n, pn})}
+
+let ＋ : Tm(Π(ℕ, _. Π(ℕ, _. ℕ))) := λ(x. λ(y. ℕ_ind(y, _. ℕ, x, _ n. S(n))))
+let × : Tm(Π(ℕ, _. Π(ℕ, _. ℕ))) := λ(x. λ(y. ℕ_ind(y, _. ℕ, 0, _ n. ﹫(﹫(＋, n), x))))
+let fact : Tm(Π(ℕ, _. ℕ)) := λ(x. ℕ_ind(x, _. ℕ, S(0), n m. ﹫(﹫(×, S(n)), m)))
+
+let 1 : Tm(ℕ) := S(0)
+let 2 : Tm(ℕ) := S(S(0))
+let 3 : Tm(ℕ) := S(S(S(0)))
+let 6 : Tm(ℕ) := ﹫(﹫(＋, 3), 3)
+let 8 : Tm(ℕ) := S(S(S(S(S(S(S(S(0))))))))
+
+(* fact 8 = 40320 *)
+eval ﹫(fact, 8) (* in my machine, takes around 0.5s *)

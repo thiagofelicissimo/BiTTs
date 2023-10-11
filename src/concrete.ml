@@ -1,179 +1,173 @@
 open Format
 module T = Term
+module V = Value
 module Ty = Typing
 
-type term = { head : string; spine : spine }
 
-and spine = arg list
+type tm = 
+  | NotApplied of string 
+  | Meta of string * subst (* invariant: subst <> [] *)
+  | Symb of string * msubst
 
-and arg = { body : term; scope : string list }
+and subst = tm list 
+and msubst = (string list * tm) list
+  
+type ctx = (string * tm) list 
 
-type ty = { ty_cst : string; ty_spine : spine}
-
-type ctx = (string * ty) list
-
-type mode =
-  | Pos
-  | Neg
-  | Ersd
-
-type prem = mode * string * ctx * ty
+type mctx = (string * ctx * tm) list
 
 type entry =
-  | Let of string * ty option * term
-  | Tm_symb of string * mode * prem list * ty
-  | Ty_symb of string * prem list
-  | Rew of term * term
-  | Type of term
-  | Eval of term
+  | Let of string * tm * tm
+  | Sort of string * mctx 
+  | Cons of string * mctx * mctx * tm 
+  | Dest of string * mctx * string * tm * mctx * tm 
+  | Rew of tm * tm  
+  | Eval of tm
+  | Eq of tm * tm
 
-(* SCOPING *)
-
-let get_db scope name =
+let get_db name scope =
   let rec get_db' scope name k =
     match scope with
     | [] -> None
     | x :: scope when x = name -> Some k
     | _ :: scope -> get_db' scope name (k + 1) in
-  get_db' scope name 0
+  get_db' scope name 0  
 
 exception Todo
+exception Name_not_in_scope
+exception Dest_not_applied
+exception Dest_binds_first_arg
 
-let rec scope_tm scope (tm : term) : T.term =
-  match get_db scope tm.head with
-  | None -> {head = T.Symb(tm.head); spine = scope_sp scope tm.spine}
-  | Some n -> {head = T.Ix(n); spine = scope_sp scope tm.spine}
+let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm = 
+  (* in the following, we consider that the variable scope shadows the 
+     metavariable scope, which shadows the signature *)
+  match t with 
+  | NotApplied(name) -> 
+    begin match get_db name scope, get_db name mscope with 
+    | None, Some i -> T.Meta(i, [])    
+    | Some i, None | Some i, Some _ -> T.Var(i) 
+    | None, None -> 
+      begin match T.RuleTbl.find_opt name !T.schem_rules with 
+      | Some T.Const(_) | Some T.Sort(_) -> T.Const(name, [])
+      | Some T.Dest(_) -> raise Dest_not_applied
+      | None -> 
+        if (V.DefTbl.find_opt name !V.defs) <> None then T.Def(name)
+        else raise Name_not_in_scope end end 
+  | Meta(name, subst) -> 
+    begin match get_db name mscope with 
+    | None -> raise Name_not_in_scope
+    | Some i -> T.Meta(i, scope_subst subst mscope scope) end
+  | Symb(name, msubst) -> 
+    begin match T.RuleTbl.find_opt name !T.schem_rules with 
+    | None -> raise Name_not_in_scope 
+    | Some(Const(_)) | Some(Sort(_)) -> T.Const(name, scope_msubst msubst mscope scope) 
+    | Some(Dest(_)) -> 
+      begin match List.rev msubst with 
+      | [] -> raise Dest_not_applied  
+      | ([], t) :: msubst' -> 
+        T.Dest(name, scope_tm t mscope scope, List.rev @@ scope_msubst msubst' mscope scope) 
+      | _ -> raise Dest_binds_first_arg end end  
 
-and scope_sp scope (sp : spine) : T.spine = List.map (scope_arg scope) sp
+and scope_subst (subst : subst) (mscope : string list) (scope : string list) : T.subst = 
+  List.map (fun x -> scope_tm x mscope scope) subst
 
-and scope_arg scope (arg : arg) : T.arg =
-  {body = scope_tm (arg.scope @ scope) arg.body; binds = List.length arg.scope}
+and scope_msubst (msubst : msubst) (mscope : string list) (scope : string list) : T.msubst = 
+  List.map (fun (names, x) -> List.length names, scope_tm x mscope (names @ scope)) msubst
 
-let scope_ty scope (ty : ty) : T.ty =
-  { ty_cst = ty.ty_cst; ty_spine = scope_sp scope ty.ty_spine }
+      
+let rec scope_ctx (ctx : ctx) (mscope : string list) : T.ctx * string list = 
+  match ctx with 
+  | [] -> [], [] 
+  | (name, ty) :: ctx' -> 
+    let scoped_ctx', scope' = scope_ctx ctx' mscope in 
+    scope_tm ty mscope scope' :: scoped_ctx', name :: scope'
 
-let scope_of_ctx (ctx : ctx) : string list = List.map fst ctx
+let rec scope_mctx (mctx : mctx) (mscope : string list) : T.mctx * string list = 
+  match mctx with 
+  | [] -> [], mscope
+  | (name, ctx, ty) :: mctx' -> 
+    let scoped_mctx', mscope' = scope_mctx mctx' mscope in 
+    let scoped_ctx, scope = scope_ctx ctx mscope' in 
+    (scoped_ctx, scope_tm ty mscope' scope) :: scoped_mctx', name :: mscope'
+    
 
-let rec scope_ctx scope (ctx : ctx) : T.ctx =
-  match ctx with
-  | [] -> []
-  | (name, ty) :: ctx ->
-    let ctx' = scope_ctx scope ctx in
-    let ty' = scope_ty (scope_of_ctx ctx @ scope) ty in
-    ty' :: ctx'
+exception Not_a_patt
 
-let scope_of_prems (prems : prem list) : string list = List.map (fun (_, name, _, _) -> name) prems
+let subst_to_scope (subst : subst) : string list = 
+  List.map (fun t -> match t with | NotApplied(name) -> name |_ -> raise Not_a_patt) subst
 
-let mode_to_mode mode : T.mode =
-  match mode with
-  | Pos -> T.Pos
-  | Neg -> T.Neg
-  | Ersd -> T.Ersd
-
-let rec scope_prems scope (prems : prem list) : T.prem list =
-  match prems with
-  | [] -> []
-  | (mode, name, ctx , ty) :: prems ->
-    let scope' = scope_of_prems prems in
-    let ctx' = scope_ctx (scope' @ scope) ctx in
-    let ty' = scope_ty (scope_of_ctx ctx @ scope' @ scope) ty in
-    let prems' = scope_prems scope prems in
-    {T.mode = mode_to_mode mode; T.boundary = ty'; T.ctx = ctx'} :: prems'
-
-let scope_tm_symb mode prems ty : T.tm_symb =
-  {
-    T.prems = scope_prems [] prems;
-    T.mode = mode_to_mode mode;
-    T.ty = scope_ty (scope_of_prems prems) ty
-  }
-
-let scope_ty_symb prems : T.ty_symb =
-  {
-    T.prems = scope_prems [] prems
-  }
-
-let rec genscope_lhs tm list : string list =
-  if tm.head.[0] = '$'
-  then begin if List.mem tm.head list then list else tm.head :: list end
-  else genscope_lhs_sp tm.spine list
-
-and genscope_lhs_sp sp list : string list =
-  match sp with
-  | [] -> list
-  | arg :: sp' ->
-    let list' = genscope_lhs arg.body list in
-    genscope_lhs_sp sp' list'
-
-let scope_rew lhs rhs =
-  let scope = List.rev @@ genscope_lhs lhs [] in
-  let lhs = scope_tm scope lhs in
-  let rhs = scope_tm scope rhs in
-  let head_symb = match lhs.head with | Symb(str) -> str | _ -> failwith "not a valid lhs" in
-  head_symb, {T.lhs_spine =  lhs.spine; T.rhs = rhs}
+let rec scope_p_tm (t : tm) : T.p_tm * string list = 
+  match t with   
+  | NotApplied(name) -> 
+    begin match T.RuleTbl.find_opt name !T.schem_rules with 
+    | Some Const(_) | Some Sort(_) -> T.Const(name, []), []
+    | Some Dest(_) -> raise Not_a_patt
+    | None -> Meta, [name] end
+  | Symb(name, msubst) ->
+    begin match T.RuleTbl.find_opt name !T.schem_rules with 
+    | Some Const(_) | Some Sort(_) -> 
+      let msubst_p, mscope = scope_p_msubst msubst in 
+      T.Const(name, msubst_p), mscope
+    | _ -> raise Not_a_patt end
+  | _ -> raise Not_a_patt
+    
+and scope_p_msubst (msubst : msubst) : T.p_msubst * string list =
+  match msubst with 
+  | [] -> [], []
+  | ([], t) :: msubst' -> 
+    let t_p, mscope1 = scope_p_tm t in 
+    let msubst'_p, mscope2 = scope_p_msubst msubst' in
+    (0, t_p) :: msubst'_p, mscope1 @ mscope2
+  | (names, Meta(name, subst)) :: msubst' when subst_to_scope subst = names -> 
+    let msubst'_p, mscope = scope_p_msubst msubst' in     
+    (List.length names, Meta) :: msubst'_p, name :: mscope
+  | (names, _) :: _ -> raise Not_a_patt (* matching inside binders not allowed *)
 
 (* PRETTY PRINTING *)
 
-let rec pp_binds fmt l =
-  match l with
+(* pre-condition: scope <> [] *)
+let rec pp_scope fmt scope =
+  match scope with
   | [s] -> fprintf fmt "%s" s
-  | s :: l -> fprintf fmt "%a %s"pp_binds l s
+  | s :: scope' -> fprintf fmt "%a %s" pp_scope scope' s
   | [] -> assert false
 
-let rec pp_term fmt term =
-  if term.spine = [] then fprintf fmt "%s" term.head
-  else fprintf fmt "%s(%a)" term.head pp_spine term.spine
 
-and pp_spine fmt e =
-  match e with
-  | [arg] -> pp_arg fmt arg
-  | arg :: e -> fprintf fmt "%a, %a" pp_spine e pp_arg arg
-  | [] -> assert false
+let rec pp_term fmt t =
+  match t with 
+  | NotApplied(name) -> fprintf fmt "%s" name 
+  | Meta(name, subst) -> fprintf fmt "%s{%a}" name pp_subst subst
+  | Symb(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
 
-and pp_arg fmt arg =
-  if arg.scope = [] then pp_term fmt arg.body
-  else fprintf fmt "%a. %a" pp_binds arg.scope pp_term arg.body
+and pp_subst fmt subst =
+  pp_print_list ~pp_sep:T.separator pp_term fmt (List.rev subst)
 
-let pp_ty fmt ty =
-  if ty.ty_spine = [] then fprintf fmt "%s" ty.ty_cst
-  else fprintf fmt "%s(%a)" ty.ty_cst pp_spine ty.ty_spine
+and pp_msubst fmt msubst =
+  let pp_arg fmt (scope, t) = 
+    if scope = [] then pp_term fmt t
+    else fprintf fmt "%a. %a" pp_scope scope pp_term t in 
+  pp_print_list ~pp_sep:T.separator pp_arg fmt (List.rev msubst)
 
-let pp_pol fmt pol =
-  match pol with
-  | Pos -> fprintf fmt "+"
-  | Neg -> fprintf fmt "-"
-  | _ -> assert false
+let pp_ctx fmt ctx = 
+  let pp_ctx_entry fmt (name, ty) = fprintf fmt "%s : %a" name pp_term ty in 
+  pp_print_list ~pp_sep:T.separator pp_ctx_entry fmt (List.rev ctx)
 
-let rec pp_ctx fmt ctx =
-  match ctx with
-  | [(name, ty)] -> fprintf fmt "%s : %a" name pp_ty ty
-  | (name, ty) :: ctx -> fprintf fmt "%a, %s : %a" pp_ctx ctx name pp_ty ty
-  | _ -> ()
+let pp_mctx fmt mctx = 
+  let pp_mctx_entry fmt (name, ctx, ty) = 
+    if ctx = [] then fprintf fmt "%s : %a" name pp_term ty
+    else fprintf fmt "%s{%a} : %a" name pp_ctx ctx pp_term ty in  
+  pp_print_list ~pp_sep:T.separator pp_mctx_entry fmt (List.rev mctx)
 
-let pp_prem fmt (mode, name, ctx, ty) =
-  match mode with
-  | Pos | Neg -> fprintf fmt "(%s : (%a) %a)%a" name pp_ctx ctx pp_ty ty pp_pol mode
-  | Ersd -> fprintf fmt "{%s : (%a) %a}" name pp_ctx ctx pp_ty ty
-
-let rec pp_prems fmt (prems : prem list) =
-  match prems with
-  | [prem] -> fprintf fmt "%a" pp_prem prem
-  | prem :: prems -> fprintf fmt "%a %a" pp_prems prems pp_prem prem
-  | _ -> assert false
-
-let pp_entry fmt entry =
-  match entry with
-  | Let(name, None, tm) -> fprintf fmt "let %s := %a@." name pp_term tm
-  | Let(name, Some ty, tm) -> fprintf fmt "let %s : %a := %a@." name pp_ty ty pp_term tm
-  | Rew(lhs, rhs) -> fprintf fmt "rew %a --> %a@." pp_term lhs pp_term rhs
-  | Tm_symb(name, mode, [], ty) ->
-    fprintf fmt "symbol%a %s : %a@." pp_pol mode name pp_ty ty
-  | Tm_symb(name, mode, prems, ty) ->
-    fprintf fmt "symbol%a %s %a : %a@." pp_pol mode name pp_prems prems pp_ty ty
-  | Ty_symb(name, []) ->
-    fprintf fmt "symbol %s : *@." name
-  | Ty_symb(name, prems) ->
-    fprintf fmt "symbol %s %a : *@." name pp_prems prems
-  | Type(tm) -> fprintf fmt "type %a@."pp_term tm
-  | Eval(tm) -> fprintf fmt "eval %a@."pp_term tm
-
-let pp_prog fmt prog = List.iter (fun x -> pp_entry fmt x) prog
+let pp_entry fmt entry = 
+  match entry with   
+  | Sort(name, mctx) -> fprintf fmt "sort %s (%a)@." name pp_mctx mctx 
+  | Cons(name, mctx1, mctx2, ty) -> 
+    fprintf fmt "constructor %s (%a) (%a) : %a@." name pp_mctx mctx1 pp_mctx mctx2 pp_term ty
+  | Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) -> 
+    fprintf fmt "destructor %s (%a) (%s : %a) (%a) : %a@." 
+    name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty
+  | Rew(lhs, rhs) -> 
+    fprintf fmt "rewrite %a --> %a@." pp_term lhs pp_term rhs
+  | Let(name, ty, t) -> fprintf fmt "let %s : %a := %a@." name pp_term ty pp_term t    
+  | Eval(t) -> fprintf fmt "eval %a@." pp_term t    
+  | Eq(t, u) -> fprintf fmt "check %a = %a@." pp_term t pp_term u

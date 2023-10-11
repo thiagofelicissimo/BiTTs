@@ -2,207 +2,120 @@ open Term
 open Value
 
 exception Todo
+exception Matched of v_msubst * tm
+exception Match_failure
 
-exception MatchUnderLambda
-exception LenghtMismatch
-exception LenghtMismatch2
-exception HeadMismatch
+(* MATCHING *)
 
-exception NoMatch
-exception Problem
-exception Matched of env * term
+let rec match_tm (p_tm : p_tm) (v_tm : v_tm) : v_msubst =  
+  match p_tm, v_tm with 
+  | Meta, _ -> [Value(v_tm)] 
+  | Const(c, p_msubst), Const(c', msubst) when c = c' -> match_msubst p_msubst msubst 
+  | _ -> raise Match_failure
 
-exception NotEqualValue of value * value * int
-exception NotEqualVTy of vty * vty * int
-exception NotEqualEnv of env * env * int
+and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst = 
+  match p_msubst, v_msubst with 
+  | [], [] -> [] 
+  | (0, p_t) :: p_msubst, Value(v) :: v_msubst -> 
+    (match_tm p_t v) @ (match_msubst p_msubst v_msubst)
+  | (n, Meta) :: p_msubst, Closure(n', t', v_msubst', v_subst') :: v_msubst when n = n' -> 
+    Closure(n', t', v_msubst', v_subst') :: (match_msubst p_msubst v_msubst)
+  | (n, _) :: _, _ -> 
+    (* matching inside binders not supported *)
+    raise Match_failure
+  | _ -> raise Match_failure
 
-exception NoMatchTm of term * value
-exception NoMatchSp of spine * env
-exception NoMatchTy of ty * vty
-
-
-module MatchTbl = Map.Make(Int)
-type match_tbl = enve MatchTbl.t
-
-let empty_match_tbl = MatchTbl.empty
-
-let match_tbl_to_env match_tbl =
-  List.rev @@ MatchTbl.fold (fun _ enve env -> enve :: env) match_tbl []
-
-(* this function supposes that we only deal with 0-order variables *)
-let gen_fresh (depth : int) (n : int) : env =
-  let rec aux depth n acc =
-    if n = 0 then acc
-    else
-      let new_var = {head = Lvl(depth); env = []} in
-      aux (depth + 1) (n - 1) ((Val(new_var) : enve) :: acc) in
-  aux depth n []
 
 (* EVAL *)
 
-let rec eval_tm (env : env) (t : term) : value =
-  (*printf "%a |- %a@." pp_env env T.pp_term t;*)
-  let env_sp = eval_sp env t.spine in
-  match t.head with
-  | Ix(n) ->
-    begin match List.nth env n with
-      | Val(v) -> v (* then env_sp should be [], but it is invariant *)
-      | Clo(clo) when List.length env_sp = clo.binds -> eval_tm (env_sp @ clo.env) clo.body
-      (* normally, this should never happen, even if the user writes something bad *)
-      | Clo(_) -> raise LenghtMismatch end
+let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =   
+  match t with
+  | Var(n) -> List.nth v_subst n 
+  | Meta(n, subst) -> 
+    begin match List.nth v_msubst n with 
+    | Value(v) -> v
+    | Closure(n, t', v_msubst', v_subst') -> 
+      eval_tm t' v_msubst' ((eval_subst subst v_msubst v_subst) @ v_subst')
+    end 
+  | Const(c, msubst) -> Const(c, eval_msubst msubst v_msubst v_subst)
+  | Def(d) -> (DefTbl.find d !defs).rhs  
+  | Dest(c, u, msubst') -> 
+    let v_u = eval_tm u v_msubst v_subst in 
+    let v_msubst' = eval_msubst msubst' v_msubst v_subst in 
+    let args =  v_msubst' @ [Value(v_u)] in     
+    let try_match (p_msubst, r) = 
+      try 
+        let result = match_msubst p_msubst args in       
+        raise (Matched(result,r)) 
+      with Match_failure -> () in
+    try 
+      List.iter try_match (try RewTbl.find c !rew_rules with _ -> []); 
+      Dest(c, v_u, v_msubst')
+    with Matched(result, r) -> eval_tm r result []
+  
+and eval_subst (subst : subst) (v_msubst : v_msubst) (v_subst : v_subst) : v_subst = 
+    List.map (fun t -> eval_tm t v_msubst v_subst) subst
 
-  | Symb(str) -> begin try
-    List.iter
-        begin fun rew_rule ->
-          try
-            let match_tbl = match_sp empty_match_tbl rew_rule.lhs_spine env_sp in
-            let new_env = match_tbl_to_env match_tbl in
-            raise @@ Matched(new_env, rew_rule.rhs)
-          with
-          | Matched(new_env, rhs) -> raise @@ Matched(new_env, rhs)
-          | _ -> () end
-        (RewTbl.find str !rew_map);
-    raise NoMatch
-    with
-    | Matched(new_env, rhs) -> eval_tm new_env rhs
-    | Not_found | NoMatch -> {head = Symb(str); env = env_sp} end
+and eval_msubst (msubst : msubst) (v_msubst : v_msubst) (v_subst : v_subst) : v_msubst = 
+    List.map (fun (n, t) -> 
+      if n = 0 
+      then Value(eval_tm t v_msubst v_subst) 
+      else Closure(n, t, v_msubst, v_subst)) msubst
 
-and eval_sp (env : env) (sp : spine) : env = List.map (eval_arg env) sp
+let rec eval_ctx (ctx : ctx) (v_msubst : v_msubst) (depth : int) : v_ctx * v_subst * int = 
+  match ctx with
+  | [] -> ([], [], depth)
+  | ty :: ctx -> 
+    let v_ctx, v_subst, depth = eval_ctx ctx v_msubst depth in     
+    let v_ty = eval_tm ty v_msubst v_subst in 
+    (v_ty :: v_ctx, Var(depth) :: v_subst, depth + 1)
+      
 
-and eval_arg (env : env) (arg : arg) : enve =
-  if arg.binds = 0
-  then
-    Val(eval_tm env arg.body)
-  else
-    Clo({
-        binds = arg.binds;
-        body = arg.body;
-        env = env
-      })
+(* EQUALITY CHECK *)
 
-(* MATCH *)
+exception Equality_check_error
 
-and match_sp (match_tbl : match_tbl) (sp : spine) (envsp : env) : match_tbl =
-  match sp, envsp with
-  | [], [] -> match_tbl
-  | arg :: sp, e :: envsp ->
-    let match_tbl = match_arg match_tbl arg e in
-    match_sp match_tbl sp envsp
-  | _ -> raise (NoMatchSp(sp, envsp))
+let rec gen_fresh n depth = 
+  if n = 0 then []
+  else Var(depth + n - 1) :: gen_fresh (n-1) depth
 
-and match_arg (match_tbl : match_tbl) (arg : arg) (e : enve) : match_tbl =
-  match arg, e with
-  | {binds = 0; body = t}, Val(v) -> match_val match_tbl t v
-  | {binds = k; body = body}, Clo({binds = n; _}) when n = k ->
-    begin match body.head with
-      (* we suppose the lhs is of the right form, so don't need to check
-       * that body.spine = x1 .. xk *)
-      | Ix(n) ->
-        begin match MatchTbl.find_opt (n-k) match_tbl with
-          | None -> MatchTbl.add (n-k) e match_tbl
-          | Some e' -> equal_enve e e' 0; match_tbl end
-      | _ ->
-        failwith "matching insde binder not supported: each x1 .. xk. in a pattern should be followed by X(x1 .. xk)"
-    end
-  | _ -> raise (NoMatchSp([arg], [e]))
+let rec equal_tm (v_t : v_tm) (v_t' : v_tm) (depth : int) : unit = 
+  match v_t, v_t' with 
+  | Var(n), Var(m) when n = m -> () 
+  | Const(c, v_msubst), Const(c', v_msubst') when c = c' -> 
+    equal_msubst v_msubst v_msubst' depth 
+  | Dest(d, v_t, v_msubst), Dest(d', v_t', v_msubst') when d = d' -> 
+    equal_tm v_t v_t' depth;
+    equal_msubst v_msubst v_msubst' depth
+  | _ -> raise Equality_check_error
 
-and match_val (match_tbl : match_tbl) (t : term) (v : value) : match_tbl =
-  match t.head, v.head with
-  | Ix(n), _ ->
-    begin match MatchTbl.find_opt n match_tbl with
-      | None -> MatchTbl.add n (Val(v) : enve) match_tbl
-      | Some v' -> equal_enve (Val(v) : enve) v' 0; match_tbl end
-  | Symb(c), Symb(d) when c = d -> match_sp match_tbl t.spine v.env
-  | _ -> raise (NoMatchTm(t, v))
-
-(* EQUAL *)
-
-and equal_val (v : value) (v' : value) (depth : int) : unit =
-  match v.head, v'.head with
-  | Symb(str1), Symb(str2) when str1 = str2 ->
-    equal_env v.env v'.env depth
-  | Lvl(n), Lvl(m) when n = m ->
-    equal_env v.env v'.env depth
-  | _ ->
-    (* printf "@.Error: %a != %a@." pp_value v pp_value v';*)
-    raise (NotEqualValue(v, v', depth))
-
-and equal_env (env : env) (env' : env) (depth : int) : unit =
-  match env, env' with
-  | [], [] -> ()
-  | e :: env, e' :: env' ->
-    equal_enve e e' depth;
-    equal_env env env' depth
-  | _ -> raise (NotEqualEnv(env, env', depth))
-
-
-and equal_enve (e : enve) (e' : enve) (depth : int) : unit =
-  match e, e' with
-  | Val(v), Val(v') ->
-    equal_val v v' depth
-  | Clo({binds = n1;body = t1;env = env1}), Clo({binds = n2; body = t2;env = env2}) when n1 = n2 ->
-    let env' = gen_fresh depth n1 in
-    equal_val
-      (eval_tm (env' @ env1) t1)
-      (eval_tm (env' @ env2) t2)
-      (depth + n1)
-  | _ -> raise (NotEqualEnv([e], [e'], depth))
+and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : unit = 
+  if (List.length v_msubst) <> (List.length v_msubst') then raise Equality_check_error;
+  List.iter2 
+    begin fun x y -> match x, y with 
+    | Value(v_t), Value(v_t') -> equal_tm v_t v_t' depth 
+    | Closure(n, t, v_msubst, v_subst), Closure(n', t', v_msubst', v_subst') when n = n' -> 
+      let fresh = gen_fresh n depth in 
+      let v_t = eval_tm t v_msubst (fresh @ v_subst) in 
+      let v_t' = eval_tm t' v_msubst' (fresh @ v_subst') in 
+      equal_tm v_t v_t' (depth + n) 
+    | _ -> raise Equality_check_error end 
+    v_msubst v_msubst' 
+  
 
 
 (* READ_BACK *)
 
-let rec read_back_tm (depth : int) (v : value) : term =
-  match v.head with
-  | Symb(str) -> {head = Symb(str); spine = read_back_sp depth v.env}
-  | Lvl(lvl) -> {head = Ix(depth - (lvl + 1)); spine = read_back_sp depth v.env}
+let rec read_back_tm (depth : int) (t : v_tm) : tm =
+  match t with 
+  | Var(i) -> Var(depth - (i + 1))
+  | Dest(name, t, msubst) -> Dest(name, read_back_tm depth t, read_back_msubst depth msubst)
+  | Const(name, msubst) -> Const(name, read_back_msubst depth msubst)
 
-and read_back_sp (depth : int) (env : env) : spine =
-  List.map (read_back_arg depth) env
-
-and read_back_arg (depth : int) (enve : enve) : arg =
-  match enve with
-  | Val(v) -> {body = read_back_tm depth v; binds = 0}
-  | Clo({body = body; binds = k; env = env}) ->
-    let env' = gen_fresh depth k in
-    let v = eval_tm (env' @ env) body in
-    {body = read_back_tm (k + depth) v; binds = k}
-
-(* CLOSE *)
-
-(* reads back env and then puts each term inside arg of size binds *)
-let close_env (depth : int) (binds : int) (env : env) : spine =
-  List.map
-    begin fun enve ->
-      let arg = read_back_arg depth enve in
-      assert (arg.binds = 0);
-      {body = arg.body; binds = binds} end
-    env
-
-
-(* types and contexts *)
-
-let eval_ty (env : env) (ty : ty) : vty =
-  {vty_cst = ty.ty_cst; vty_env = eval_sp env ty.ty_spine}
-
-let match_ty (ty : ty) (vty : vty) : env =
-  if ty.ty_cst <> vty.vty_cst then raise (NoMatchTy(ty, vty))
-  else match_tbl_to_env @@ match_sp empty_match_tbl ty.ty_spine vty.vty_env
-
-let equal_vty (vty : vty) (vty' : vty) (depth : int) : unit =
-  if vty.vty_cst <> vty'.vty_cst then raise (NotEqualVTy(vty, vty', depth))
-  else equal_env vty.vty_env vty'.vty_env depth
-
-let read_back_ty (depth : int) (vty : vty) : ty =
-  {ty_cst = vty.vty_cst; ty_spine = read_back_sp depth vty.vty_env}
-
-let env_of_vctx (vctx : vctx) : env = List.map (fun x -> (Val(fst x) : enve)) vctx
-
-(* evaluates gamma in env, producing a value context with lvls starting at lvl=depth *)
-let rec eval_ctx (depth : int) (env : env) (gamma : ctx) : vctx =
-  match gamma with
+and read_back_msubst (depth : int) (msubst : v_msubst) : msubst = 
+  match msubst with 
   | [] -> []
-  | ty :: gamma ->
-    let gamma = eval_ctx depth env gamma in
-    let vty = eval_ty (env_of_vctx gamma @ env) ty in
-    let nvar = {head = Lvl(List.length gamma + depth); env = []} in
-    (nvar, vty) :: gamma
+  | Value(v) :: msubst' -> (0, read_back_tm depth v) :: read_back_msubst depth msubst'
+  | Closure(n, t, v_msubst', v_subst') :: msubst' -> 
+    let v_t = eval_tm t v_msubst' (gen_fresh n depth @ v_subst') in 
+    (n, read_back_tm (depth + n) v_t) :: read_back_msubst depth msubst'

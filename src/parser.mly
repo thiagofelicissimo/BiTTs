@@ -4,9 +4,9 @@
 
 %}
 %token EOF
-%token SYMBOL CONS DEST SORT REW LET TYPE EVAL
-%token LPAR RPAR RPAR_POS RPAR_NEG LBRACK RBRACK
-%token COLON DOT COMMA REDUCES DEF STAR PLUS MINUS
+%token CONS DEST SORT REW LET EVAL CHECK
+%token LPAR RPAR LBRACK RBRACK
+%token COLON DOT COMMA REDUCES DEF EQUAL
 %token <string> IDENT
 
 %start program
@@ -14,59 +14,52 @@
 
 %%
 
+
 term:
-  | id=IDENT { {head = id; spine = []} }
-  | id=IDENT LPAR e=spine RPAR { {head = id; spine = e} }
-  | id=IDENT LBRACK e=spine RBRACK { {head = id; spine = e} }
-
-spine:
-  | e=separated_nonempty_list(COMMA, arg) { List.rev e }
-
-arg:
-  | t=term { { scope = []; body = t } }
-  | scope=scope DOT t=term { {scope = scope; body = t} }
+  | id=IDENT { NotApplied(id) }
+  | id=IDENT LBRACK subst=subst RBRACK { Meta(id, subst) }  
+  | id=IDENT LPAR msubst=msubst RPAR { Symb(id, msubst) }
+  
+subst:
+  | e=separated_list(COMMA, term) { List.rev e }
 
 scope:
   | l=nonempty_list(IDENT) { List.rev l }
 
-ty:
-  | id=IDENT { {ty_cst = id; ty_spine = []} }
- (* special case for allowing to write Tm A and Prf P instead of Tm(A) and Prf(P)*)
-  | id=IDENT t=term { {ty_cst = id; ty_spine = [{scope = []; body = t}]} }
-  | id=IDENT LPAR e=spine RPAR { {ty_cst = id; ty_spine = e} }
-  | id=IDENT LBRACK e=spine RBRACK { {ty_cst = id; ty_spine = e} }
+arg: 
+  | t=term { ([], t) }
+  | scope=scope DOT t=term { (scope, t) }
+
+msubst: 
+  | e=separated_list(COMMA, arg) { List.rev e }
+
 
 ctx_entry:
-  | id=IDENT COLON ty=ty { (id, ty) }
+  | id=IDENT COLON ty=term { (id, ty) }
 
-prem:
-  | id=IDENT LBRACK l=separated_list(COMMA, ctx_entry) RBRACK COLON ty=ty { (Neg, id, List.rev l, ty) }
-  | id=IDENT COLON ty=ty { (Neg, id, [], ty) }
+ctx: 
+  | LBRACK e=separated_list(COMMA, ctx_entry) RBRACK { List.rev e }
 
-erased_prem:
-  | id=IDENT LBRACK l=separated_list(COMMA, ctx_entry) RBRACK COLON ty=ty { (Ersd, id, List.rev l, ty) }
-  | id=IDENT COLON ty=ty { (Ersd, id, [], ty) }  
+
+mctx_entry:
+  | id=IDENT COLON ty=term { (id, [], ty) }
+  | id=IDENT ctx=ctx COLON ty=term { (id, ctx, ty) }
+
+mctx: 
+  | LPAR e=separated_list(COMMA, mctx_entry) RPAR { List.rev e }  
+
 
 entry:
-  | SORT id=IDENT LPAR prems=separated_list(COMMA, prem) RPAR
-    {Ty_symb(id, List.rev prems)}
-(*  | SORT id=IDENT  
-    {Ty_symb(id, [])}  *)
-  | CONS id=IDENT LPAR e_prems=separated_list(COMMA, erased_prem) RPAR LPAR prems=separated_list(COMMA, prem) RPAR COLON ty=ty  
-    {Tm_symb(id, Neg, (List.rev prems) @ (List.rev e_prems), ty)}
-(*  | CONS id=IDENT LPAR prems=separated_nonempty_list(COMMA, prem) RPAR COLON ty=ty
-    {Tm_symb(id, Neg, List.rev prems, ty)} *)
-  | DEST id=IDENT LPAR e_prems=separated_list(COMMA, erased_prem) RPAR LPAR id_parg=IDENT COLON ty_arg=ty RPAR LPAR prems=separated_list(COMMA, prem) RPAR COLON ty=ty
-    {Tm_symb(id, Pos, (List.rev prems) @ [(Pos, id_parg, [], ty_arg)] @ (List.rev e_prems), ty)}
-  | REW lhs=term REDUCES rhs=term
-    { Rew(lhs, rhs) }
-  | LET id=IDENT COLON ty=ty DEF tm=term
-    { Let(id, Some(ty), tm) }
-  | LET id=IDENT DEF tm=term
-    { Let(id, None, tm) }
-  | TYPE tm=term
-    { Type(tm) }
+  | SORT id=IDENT mctx=mctx { Sort(id, mctx)}
+  | CONS id=IDENT mctx1=mctx mctx2=mctx COLON ty=term { Cons(id, mctx1, mctx2, ty) }
+  | DEST id=IDENT mctx1=mctx LPAR id_arg=IDENT COLON ty_arg=term RPAR mctx2=mctx COLON ty=term 
+    { Dest(id, mctx1, id_arg, ty_arg, mctx2, ty) }
+  | REW lhs=term REDUCES rhs=term { Rew(lhs, rhs) }
+  | LET id=IDENT COLON ty=term DEF tm=term
+    { Let(id, ty, tm) }  
   | EVAL tm=term
     { Eval(tm) }    
+  | CHECK t=term EQUAL u=term { Eq(t, u) }
+
 program:
   | l=list(entry) EOF { l }

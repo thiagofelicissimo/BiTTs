@@ -1,0 +1,88 @@
+
+(* MLTT with a hierarchy of (weak) cumulative Coquand-style universes, and universe polymorphism *)
+
+sort Lvl ()
+constructor l0 () () : Lvl
+constructor lS () (_ : Lvl) : Lvl
+
+sort Ty (l : Lvl) 
+sort Tm (l : Lvl, A : Ty(l))
+
+
+
+(* (Weak) Coquand Universes *)
+constructor U (l : Lvl) () : Ty(lS(l))
+constructor c (l : Lvl) (A : Ty(l)) : Tm(lS(l), U)
+destructor El (l : Lvl) (t : Tm(lS(l), U)) () : Ty(l)
+
+(* Ty(l) is a retract of Tm(U(l)) *)
+rewrite El(c(A)) --> A
+
+
+(* Weak cumulativity *)
+constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(lS(l))
+constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(lS(l), ↑(A))
+destructor unbox (l : Lvl, A : Ty(l)) (t : Tm(lS(l), ↑(A))) () : Tm(l, A)
+
+(* Tm(l, A) is a retract of Tm(lS(l), ↑(A)) *)
+rewrite unbox(box(t)) --> t
+
+(* Dependent products *)
+constructor Π (l : Lvl) (A : Ty(l), B {x : Tm(l, A)} : Ty(l)) : Ty(l)
+constructor λ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) (t{x : Tm(l, A)} : Tm(l, B{x}))
+        : Tm(l, Π(A, x. B{x}))
+destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) (t : Tm (l, Π(A, x. B{x}))) (u : Tm(l, A))
+        : Tm(l, B{u})
+
+rewrite ﹫(λ(x. t{x}), u) --> t{u}
+
+(* Natural numbers *)
+constructor ℕ () () : Ty(l0)
+constructor 0 () () : Tm(l0, ℕ)
+constructor S () (_ : Tm(l0, ℕ)) : Tm(l0, ℕ)
+
+destructor ℕ_ind    ()
+                    (n : Tm(l0, ℕ))
+                    (i : Lvl, 
+                     P {x : Tm(l0, ℕ)} : Ty(i), 
+                     p0 : Tm(i, P{0}), 
+                     ps {n : Tm(l0, ℕ), pn : Tm(i, P{n})} : Tm(i, P{S(n)}))
+                (* ------------ *)
+                    : Tm(i, P{n})
+
+rewrite ℕ_ind(0, i, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+rewrite ℕ_ind(S(n), i, x. P{x}, p0, n pn. ps{n, pn}) -->
+    ps{n, ℕ_ind(n, i, x. P{x}, p0, n pn. ps{n, pn})}
+
+(* Some functions written using ℕ_ind *)
+
+let ＋ : Tm(l0, Π(ℕ, _. Π(ℕ, _. ℕ))) := λ(x. λ(y. ℕ_ind(y, l0, _. ℕ, x, _ n. S(n))))
+
+let × : Tm(l0, Π(ℕ, _. Π(ℕ, _. ℕ))) :=
+    λ(x. λ(y. ℕ_ind(y, l0, _. ℕ, 0, _ n. ﹫(﹫(＋, n), x))))
+
+let fact : Tm(l0, Π(ℕ, _. ℕ)) := λ(x. ℕ_ind(x, l0, _. ℕ, S(0), n m. ﹫(﹫(×, S(n)), m)))
+
+let fact_4 : Tm(l0, ℕ) := ﹫(fact, S(S(S(S(0)))))
+eval fact_4
+
+
+(* universe polymorphism *)
+sort Tyω ()
+sort Tmω (A : Tyω)
+
+constructor ∀ () (l {i : Lvl} : Lvl, A {i : Lvl} : Ty(l{i})) : Tyω
+
+constructor Λ (l {i : Lvl} : Lvl, A {i : Lvl} : Ty(l{i})) (t{i : Lvl} : Tm(l{i}, A{i}))
+        : Tmω(∀(i. l{i}, i. A{i}))
+destructor inst (l {i : Lvl} : Lvl, A {i : Lvl} : Ty(l{i})) (t : Tmω(∀(i. l{i}, i. A{i}))) (i : Lvl)
+        : Tm(l{i}, A{i})
+rewrite inst(Λ(i. t{i}), l) --> t{l}
+
+(* universe polymorphic id function *)
+let id_poly : Tmω(∀(i. lS(i), i. Π(U, a. Π(↑(El(a)), _. ↑(El(a))))))
+    :=  Λ(i. λ(a. λ(x. x)))
+
+(* applying it to 0 *)
+let 0' : Tm(l0, ℕ) := unbox(﹫(﹫(inst(id_poly, l0), c(ℕ)), box(0)))
+check 0' = 0

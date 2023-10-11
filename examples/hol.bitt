@@ -1,0 +1,42 @@
+
+(* HIGHER-ORDER LOGIC (AKA SIMPLE TYPE THEORY) *)
+
+sort Ty ()
+sort Tm (A : Ty)
+
+constructor prop () () : Ty
+sort Prf (t : Tm(prop))
+
+(* simple function type *)
+constructor → () (A : Ty, B : Ty) : Ty
+constructor λ (A : Ty, B : Ty) (t{x : Tm(A)} : Tm(B)) : Tm(→(A, B))
+destructor ﹫ (A : Ty, B : Ty) (t : Tm(→(A, B))) (u : Tm(A)) : Tm(B)
+rewrite ﹫(λ(x. t{x}), u) --> t{u}
+
+constructor  ∀ () (A : Ty, P{x : Tm(A)} : Tm(prop)) : Tm(prop)
+constructor in∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) (t{x : Tm(A)} : Prf(P{x})) : Prf(∀(A, x. P{x}))
+destructor  el∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) (t : Prf(∀(A, x. P{x}))) (u : Tm(A)) : Prf(P{u})
+rewrite el∀(in∀(x. p{x}), t) --> p{t}
+
+constructor ⇒ () (P : Tm(prop), Q : Tm(prop)) : Tm(prop)
+constructor in⇒ (P : Tm(prop), Q : Tm(prop)) (q{p : Prf(P)} : Prf(Q)) : Prf(⇒(P, Q))
+destructor  el⇒ (P : Tm(prop), Q : Tm(prop)) (pq : Prf(⇒(P, Q))) (p : Prf(P)) : Prf(Q)
+rewrite el⇒(in⇒(x. q{x}), p) --> q{p}
+
+let P⇒P : Prf(∀(prop, P. ⇒(P, P)))
+    := in∀(P. in⇒(p. p))
+
+let K : Prf(∀(prop, P. ∀(prop, Q. ⇒(P, ⇒(Q, P)))))
+    := in∀(P. in∀(Q. in⇒(p. in⇒(q. p))))
+
+let ∧ : Tm(→(prop, →(prop, prop)))
+    := λ(p. λ(q. ∀(prop, r. ⇒(⇒(p, ⇒(q, r)), r))))
+
+let in∧ : Prf(∀(prop, P. ∀(prop, Q. ⇒(P, ⇒(Q, ﹫(﹫(∧, P), Q))))))
+    := in∀(P. in∀(Q. in⇒(p. in⇒(q. in∀(R. in⇒(ϕ. el⇒(el⇒(ϕ, p), q)))))))
+
+let el1∧ : Prf(∀(prop, P. ∀(prop, Q. ⇒(﹫(﹫(∧, P), Q), P))))
+    := in∀(P. in∀(Q. in⇒(pq. el⇒(el∀(pq, P), in⇒(x. in⇒(y. x))))))
+
+let el2∧ : Prf(∀(prop, P. ∀(prop, Q. ⇒(﹫(﹫(∧, P), Q), Q))))
+    := in∀(P. in∀(Q. in⇒(pq. el⇒(el∀(pq, Q), in⇒(x. in⇒(y. y))))))

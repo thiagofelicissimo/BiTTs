@@ -1,67 +1,41 @@
 module T = Term
 open Format
 
-type vhead =
-  | Symb of string
-  | Lvl of int
+type v_tm = 
+  | Var of int (* level *)
+  | Const of string * v_msubst 
+  | Dest of string * v_tm * v_msubst 
 
-type value =
-  {
-    head : vhead;
-    env : env
-  }
+and v_subst = v_tm list
 
-and env = enve list
+and v_arg = 
+  | Value of v_tm 
+  | Closure of int * T.tm * v_msubst * v_subst
+and v_msubst = v_arg list 
 
-and enve =
-  | Val of value
-  | Clo of closure
+type v_ctx = v_tm list
 
-and closure =
-  {
-    binds : int;
-    body : T.term;
-    env : env
-  }
+module DefTbl = Map.Make(String)
 
-type vty =
-  {
-    vty_cst : string;
-    vty_env : env
-  }
+type def = {rhs : v_tm; ty : v_tm}
+type defs = def DefTbl.t
+let defs : defs ref = ref DefTbl.empty
 
-type vctx = (value * vty) list
+let rec pp_vterm fmt t = 
+  match t with 
+  | Var(n) -> fprintf fmt "%d" n    
+  | Dest(name, t, []) -> fprintf fmt "%s(%a)" name pp_vterm t
+  | Dest(name, t, msubst) -> fprintf fmt "%s(%a; %a)" name pp_vterm t pp_vmsubst msubst
+  | Const(name, []) -> fprintf fmt "%s" name
+  | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_vmsubst msubst
 
-(* PRETTY PRINTING *)
+and pp_vsubst fmt subst = 
+  pp_print_list ~pp_sep:T.separator pp_vterm fmt (List.rev subst)
 
-let pp_vhead fmt hd =
-  match hd with
-  | Symb(str) -> fprintf fmt "%s" str
-  | Lvl(n) -> fprintf fmt "l%s" (string_of_int n)
-
-let rec pp_value fmt t =
-  if t.env = []
-  then pp_vhead fmt t.head
-  else fprintf fmt "%a(%a)" pp_vhead t.head pp_env t.env
-
-(* we print from right to left because env are snoc lists *)
-and pp_env fmt env =
-  match env with
-  | [] -> fprintf fmt ""
-  | [Val(v)] -> fprintf fmt "%a" pp_value v
-  | Val(v) :: env -> fprintf fmt "%a, %a" pp_env env pp_value v
-  | [Clo({binds = n; body = t; env = env'})] ->
-    fprintf fmt "<%a|%s.%a>" pp_env env' (string_of_int n) T.pp_term t
-  | Clo({binds = n; body = t; env = env'}) :: env ->
-    fprintf fmt "%a, <%a|%s.%a>" pp_env env pp_env env' (string_of_int n) T.pp_term t
-
-let pp_vty fmt vty =
-  if vty.vty_env = []
-  then fprintf fmt "%s" vty.vty_cst
-  else fprintf fmt "%s(%a)" vty.vty_cst pp_env vty.vty_env
-
-let rec pp_vctx fmt vctx =
-  match vctx with
-  | [] -> fprintf fmt ""
-  | [(_, vty)] -> pp_vty fmt vty
-  | (_, vty) :: vctx -> fprintf fmt "%a, %a" pp_vctx vctx pp_vty vty
+and pp_vmsubst fmt msubst =
+  let pp_arg fmt arg = 
+    match arg with 
+    | Value(t) -> pp_vterm fmt t 
+    | Closure(n', t, v_msubst, v_subst) -> 
+      fprintf fmt "<%d. %a | %a | %a>" n' T.pp_term t pp_vmsubst v_msubst pp_vsubst v_subst in  
+  pp_print_list ~pp_sep:T.separator pp_arg fmt (List.rev msubst)

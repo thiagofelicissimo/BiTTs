@@ -1,148 +1,83 @@
 open Format
 
-type head =
-  | Symb of string
-  | Ix of int
+type tm = 
+  | Var of int (* index *)
+  | Meta of int * subst 
+  | Const of string * msubst 
+  | Dest of string * tm * msubst 
+  | Def of string (* top-level def *)
 
-type term =
-  {
-    head : head;
-    spine : spine
-  }
+and subst = tm list
 
-and spine = arg list
+and msubst = (int * tm) list
 
-and arg =
-  {
-    body : term;
-    binds : int
-  }
+type ctx = tm list
 
-type rew_rule =
-  {
-    lhs_spine : spine;
-    rhs : term
-  }
+type mctx = (ctx * tm) list
+
+(* patterns *)
+type p_tm = 
+  | Meta
+  | Const of string * p_msubst
+and p_msubst = (int * p_tm) list
+
+type schem_rule = 
+  | Sort of mctx 
+  | Const of mctx * mctx * p_tm 
+  | Dest of mctx * p_tm * mctx * tm  
+
+module RuleTbl = Map.Make(String)
+type schem_rules = schem_rule RuleTbl.t
+let schem_rules : schem_rules ref = ref RuleTbl.empty
+
+type rew_rule = p_msubst * tm
 
 module RewTbl = Map.Make(String)
-type rew_map = (rew_rule list) RewTbl.t
-let rew_map : rew_map ref = ref RewTbl.empty
-
-type ty =
-  {
-    ty_cst : string;
-    ty_spine : spine
-  }
-
-type ctx = ty list (* only types of order 0 *)
-
-type mode = Pos | Neg | Ersd
-
-type prem =
-  {
-    ctx : ctx;
-    mode : mode;
-    boundary : ty
-  }
-
-type tm_symb = {
-  prems : prem list;
-  mode : mode;
-  ty : ty
-}
-
-type ty_symb = {
-  prems : prem list
-}
-
-type symb =
-  | Tm_symb of tm_symb
-  | Ty_symb of ty_symb
-
-module SignTbl = Map.Make(String)
-type sign = symb SignTbl.t
-let sign : sign ref = ref SignTbl.empty
-
-(* PRETTY PRINTING WITH NAMES *)
-
-let ppn_head depth fmt hd =
-  match hd with
-  | Symb(str) -> fprintf fmt "%s" str
-  | Ix(n) -> fprintf fmt "x%s" (string_of_int (depth - n - 1))
-
-let rec ppn_binders depth fmt size =
-  if size = 0 then assert false
-  else if size = 1 then fprintf fmt "x%s" (string_of_int depth)
-  else fprintf fmt "%a x_%s" (ppn_binders (depth + 1)) (size - 1) (string_of_int depth)
-
-let rec ppn_term depth fmt t =
-  if t.spine = []
-  then ppn_head depth fmt t.head
-  else fprintf fmt "%a(%a)" (ppn_head depth) t.head (ppn_spine depth) t.spine
-
-(* we print from right to left because spines are snoc lists *)
-and ppn_spine depth fmt sp =
-  match sp with
-  | [] -> fprintf fmt ""
-  | [{binds = n; body = t}] ->
-    if n = 0
-    then fprintf fmt "%a" (ppn_term depth) t
-    else fprintf fmt "%a. %a" (ppn_binders depth) n (ppn_term (depth + n)) t
-  | {binds = n; body = t} :: sp ->
-    if n = 0
-    then fprintf fmt "%a, %a" (ppn_spine depth) sp (ppn_term depth) t
-    else fprintf fmt "%a, %a. %a" (ppn_spine depth) sp (ppn_binders depth) n (ppn_term (depth + n)) t
-
-let ppn_ty depth fmt ty =
-  if ty.ty_spine = []
-  then fprintf fmt "%s" ty.ty_cst
-  else fprintf fmt "%s(%a)" ty.ty_cst (ppn_spine depth) ty.ty_spine
+type rew_rules = (rew_rule list) RewTbl.t
+let rew_rules : rew_rules ref = ref RewTbl.empty
 
 
-(* PRETTY PRINTING *)
-
-let pp_head fmt hd =
-  match hd with
-  | Symb(str) -> fprintf fmt "%s" str
-  | Ix(n) -> fprintf fmt "i%s" (string_of_int n)
-
-let rec pp_term fmt t =
-  if t.spine = []
-  then pp_head fmt t.head
-  else fprintf fmt "%a(%a)" pp_head t.head pp_spine t.spine
-
-(* we print from right to left because spines are snoc lists *)
-and pp_spine fmt sp =
-  match sp with
-  | [] -> fprintf fmt ""
-  | [{binds = n; body = t}] ->
-    if n = 0
-    then fprintf fmt "%a" pp_term t
-    else fprintf fmt "%s.%a" (string_of_int n) pp_term t
-  | {binds = n; body = t} :: sp ->
-    if n = 0
-    then fprintf fmt "%a, %a" pp_spine sp pp_term t
-    else fprintf fmt "%a, %s.%a" pp_spine sp (string_of_int n) pp_term t
-
-let pp_ty fmt ty =
-  if ty.ty_spine = []
-  then fprintf fmt "%s" ty.ty_cst
-  else fprintf fmt "%s(%a)" ty.ty_cst pp_spine ty.ty_spine
-
-let rec pp_ctx fmt ctx =
-  match ctx with
-  | [] -> fprintf fmt ""
-  | [ty] -> pp_ty fmt ty
-  | ty :: ctx -> fprintf fmt "%a, %a" pp_ctx ctx pp_ty ty
+let separator fmt () = 
+  fprintf fmt ", "
 
 
-let pp_prem fmt (prem : prem) =
-  match prem.mode with
-  | Ersd -> fprintf fmt "{(%a) -> %a}" pp_ctx prem.ctx pp_ty prem.boundary
-  | Pos -> fprintf fmt "((%a) -> %a)+" pp_ctx prem.ctx pp_ty prem.boundary
-  | Neg -> fprintf fmt "((%a) -> %a)-" pp_ctx prem.ctx pp_ty prem.boundary
+let rec pp_term fmt t = 
+  match t with 
+  | Var(n) -> fprintf fmt "%d" n  
+  | Meta(n, subst) -> fprintf fmt "%d{%a}" n pp_subst subst 
+  | Dest(name, t, []) -> fprintf fmt "%s(%a)" name pp_term t
+  | Dest(name, t, msubst) -> fprintf fmt "%s(%a; %a)" name pp_term t pp_msubst msubst
+  | Const(name, []) -> fprintf fmt "%s" name
+  | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
+  | Def(name) -> fprintf fmt "%s" name
 
-let rec pp_prems fmt prems =
-  match prems with
-  | [] -> fprintf fmt ""
-  | prem :: prems -> fprintf fmt "%a %a" pp_prems prems pp_prem prem
+and pp_subst fmt subst = 
+  pp_print_list ~pp_sep:separator pp_term fmt (List.rev subst)
+
+and pp_msubst fmt msubst =
+let pp_arg fmt (n, t) = 
+  if n = 0 then pp_term fmt t
+  else fprintf fmt "%d. %a" n pp_term t in 
+pp_print_list ~pp_sep:separator pp_arg fmt (List.rev msubst)
+
+let pp_ctx fmt ctx = 
+let pp_ctx_entry fmt ty = fprintf fmt "%a" pp_term ty in 
+pp_print_list ~pp_sep:separator pp_ctx_entry fmt (List.rev ctx)
+
+let pp_mctx fmt mctx = 
+let pp_mctx_entry fmt (ctx, ty) = 
+  if ctx = [] then fprintf fmt "%a" pp_term ty
+  else fprintf fmt "{%a} : %a" pp_ctx ctx pp_term ty in  
+pp_print_list ~pp_sep:separator pp_mctx_entry fmt (List.rev mctx)  
+
+let rec pp_p_term fmt t = 
+  match t with 
+  | Meta -> fprintf fmt "?"
+  | Const(name, []) -> fprintf fmt "%s" name
+  | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_p_msubst msubst
+
+and pp_p_msubst fmt msubst =
+  let pp_arg fmt (n, t) = 
+    if n = 0 then pp_p_term fmt t
+    else fprintf fmt "%d. %a" n pp_p_term t in 
+  pp_print_list ~pp_sep:separator pp_arg fmt (List.rev msubst)

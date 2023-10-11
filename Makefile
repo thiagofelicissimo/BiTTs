@@ -1,18 +1,12 @@
-.PHONY: test
+.PHONY: examples
 
 all:
 	dune build
 
-quick-intro:
-	dune exec -- complf test/quick-intro.complf
-
-test:
-	dune exec -- complf test/basic-mltt.complf
-	dune exec -- complf test/basic-mltt-all-infer.complf
-	dune exec -- complf test/hol.complf
-	dune exec -- complf test/mltt-univpoly.complf
-	dune exec -- complf test/mltt-cumulative-and-univpoly.complf
-	dune exec -- complf test/mltt-coquand-universes-and-univpoly.complf
+examples:
+	dune exec -- bitt examples/mltt.bitt	
+	dune exec -- bitt examples/hol.bitt	
+	dune exec -- bitt examples/mltt-coquand.bitt
 
 test-big-numbers:
-	dune exec -- complf test/big-numbers.complf
+	dune exec -- bitt examples/big-numbers.bitt
