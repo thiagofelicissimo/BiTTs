@@ -273,6 +273,4 @@ let 2_Nat : Tm(Nat) := ﹫(succ, ﹫(succ, zero))
 let 3_Nat : Tm(Nat) := ﹫(succ, 2_Nat)
 let 5_Nat : Tm(Nat) := ﹫(succ, ﹫(succ, 3_Nat))
 
-eval 5_Nat
-
 check 5_Nat = ﹫(﹫(plus, 2_Nat), 3_Nat)
