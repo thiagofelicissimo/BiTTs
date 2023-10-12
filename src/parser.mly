@@ -51,7 +51,10 @@ mctx:
 
 entry:
   | SORT id=IDENT mctx=mctx { Sort(id, mctx)}
-  | CONS id=IDENT mctx1=mctx mctx2=mctx COLON ty=term { Cons(id, mctx1, mctx2, ty) }
+  | CONS id=IDENT mctx1=mctx mctx2=mctx COLON ty=term 
+    { Cons(id, mctx1, mctx2, [], [], ty) }  
+  | CONS id=IDENT mctx1=mctx mctx2=mctx LPAR msubst1=msubst EQUAL msubst2=msubst RPAR COLON ty=term 
+    { Cons(id, mctx1, mctx2, msubst1, msubst2, ty) }
   | DEST id=IDENT mctx1=mctx LPAR id_arg=IDENT COLON ty_arg=term RPAR mctx2=mctx COLON ty=term 
     { Dest(id, mctx1, id_arg, ty_arg, mctx2, ty) }
   | REW lhs=term REDUCES rhs=term { Rew(lhs, rhs) }

@@ -23,7 +23,7 @@ and p_msubst = (int * p_tm) list
 
 type schem_rule = 
   | Sort of mctx 
-  | Const of mctx * mctx * p_tm 
+  | Const of mctx * mctx * msubst * msubst * p_tm 
   | Dest of mctx * p_tm * mctx * tm  
 
 module RuleTbl = Map.Make(String)

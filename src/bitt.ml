@@ -40,17 +40,20 @@ let () =
       let prog = L.get_concrete_syntax file in      
       List.iter begin fun entry ->        
         current_entry := Some entry;
-        (* C.pp_entry Format.std_formatter entry; *)
+        (* C.pp_entry Format.std_formatter entry;*)
         match entry with
         | C.Sort(name, mctx) ->           
           let mctx', _ = C.scope_mctx mctx [] in 
           T.schem_rules := T.RuleTbl.add name (T.Sort mctx') !T.schem_rules
-        | C.Cons(name, mctx1, mctx2, ty) -> 
+        | C.Cons(name, mctx1, mctx2, msubst1, msubst2, ty) -> 
           let mctx1', mscope1 = C.scope_mctx mctx1 [] in 
-          let mctx2', _ = C.scope_mctx mctx2 mscope1 in 
+          let mctx2', mscope2 = C.scope_mctx mctx2 mscope1 in 
           let ty_p, ty_scope = C.scope_p_tm ty in 
           assert (mscope1 = ty_scope);
-          T.schem_rules := T.RuleTbl.add name (T.Const(mctx1', mctx2', ty_p)) !T.schem_rules
+          let msubst1' = C.scope_msubst msubst1 mscope2 [] in
+          let msubst2' = C.scope_msubst msubst2 mscope2 [] in          
+          T.schem_rules := 
+            T.RuleTbl.add name (T.Const(mctx1', mctx2', msubst1', msubst2', ty_p)) !T.schem_rules
         | C.Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) -> 
           let mctx1', mscope1 = C.scope_mctx mctx1 [] in 
           let ty_arg_p, arg_mscope = C.scope_p_tm ty_arg in 

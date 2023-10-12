@@ -19,7 +19,7 @@ type mctx = (string * ctx * tm) list
 type entry =
   | Let of string * tm * tm
   | Sort of string * mctx 
-  | Cons of string * mctx * mctx * tm 
+  | Cons of string * mctx * mctx * msubst * msubst * tm 
   | Dest of string * mctx * string * tm * mctx * tm 
   | Rew of tm * tm  
   | Eval of tm
@@ -161,8 +161,9 @@ let pp_mctx fmt mctx =
 let pp_entry fmt entry = 
   match entry with   
   | Sort(name, mctx) -> fprintf fmt "sort %s (%a)@." name pp_mctx mctx 
-  | Cons(name, mctx1, mctx2, ty) -> 
-    fprintf fmt "constructor %s (%a) (%a) : %a@." name pp_mctx mctx1 pp_mctx mctx2 pp_term ty
+  | Cons(name, mctx1, mctx2, msubst1, msubst2, ty) -> 
+    fprintf fmt "constructor %s (%a) (%a) (%a = %a ): %a@." 
+      name pp_mctx mctx1 pp_mctx mctx2 pp_msubst msubst1 pp_msubst msubst2 pp_term ty
   | Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) -> 
     fprintf fmt "destructor %s (%a) (%s : %a) (%a) : %a@." 
     name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty

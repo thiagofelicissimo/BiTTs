@@ -14,7 +14,7 @@ let get_drule (x : schem_rule) =
 
 let get_crule (x : schem_rule) = 
   match x with
-  | Const(mctx, mctx', p_ty) -> (mctx, mctx', p_ty)
+  | Const(mctx, mctx', msubst1, msubst2, p_ty) -> (mctx, mctx', msubst1, msubst2, p_ty)
   | _ -> assert false
 
 let get_srule (x : schem_rule) = 
@@ -22,7 +22,7 @@ let get_srule (x : schem_rule) =
   | Sort(mctx) -> mctx
   | _ -> assert false
 
-let rec infer (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =   
+let rec infer (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =     
   match t with 
   | Var(n) -> List.nth v_ctx n
   | Dest(d, u, msubst) -> 
@@ -35,14 +35,18 @@ let rec infer (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =
   | Meta(_) -> raise Metas_not_supported
   | Const(_) -> raise Not_inferable
 
-and check (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) (ty : v_tm) = 
+and check (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) (ty : v_tm) =   
   match t with 
   | Var(_) | Dest(_) | Def(_) -> 
     let ty' = infer v_ctx v_subst t in equal_tm ty ty' (List.length v_subst)
   | Const(c, msubst) -> 
-    let _, mctx, p_ty = get_crule (RuleTbl.find c !schem_rules) in 
+    let _, mctx, msubst1, msubst2, p_ty = get_crule (RuleTbl.find c !schem_rules) in 
     let v_msubst = match_tm p_ty ty in 
-    ignore @@ check_msubst v_ctx v_subst v_msubst msubst mctx
+    let v_msubst' = check_msubst v_ctx v_subst v_msubst msubst mctx in 
+    equal_msubst 
+      (eval_msubst msubst1 v_msubst' [])
+      (eval_msubst msubst2 v_msubst' [])
+      (List.length v_subst)
   | Meta(_) -> raise Metas_not_supported
 
   

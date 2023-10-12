@@ -79,14 +79,14 @@ let rec gen_fresh n depth =
   if n = 0 then []
   else Var(depth + n - 1) :: gen_fresh (n-1) depth
 
-let rec equal_tm (v_t : v_tm) (v_t' : v_tm) (depth : int) : unit = 
+let rec equal_tm (v_t : v_tm) (v_t' : v_tm) (depth : int) : unit =   
   match v_t, v_t' with 
   | Var(n), Var(m) when n = m -> () 
   | Const(c, v_msubst), Const(c', v_msubst') when c = c' -> 
     equal_msubst v_msubst v_msubst' depth 
   | Dest(d, v_t, v_msubst), Dest(d', v_t', v_msubst') when d = d' -> 
     equal_tm v_t v_t' depth;
-    equal_msubst v_msubst v_msubst' depth
+    equal_msubst v_msubst v_msubst' depth  
   | _ -> raise Equality_check_error
 
 and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : unit = 

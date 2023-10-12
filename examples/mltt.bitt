@@ -3,9 +3,7 @@
 
 (* Judgment forms *)
 sort Ty ()
-
 sort Tm (A : Ty)
-
 
 
 (* Taski-style universe *)
@@ -35,7 +33,6 @@ rewrite ﹫(λ(x. t{x}), u) --> t{u}
 
 
 constructor π () (a : Tm(U), b{_ : Tm(El(a))} : Tm(U)) : Tm(U)
-
 rewrite El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
 
@@ -59,18 +56,8 @@ rewrite π₂(mkΣ(t, u)) --> u
 
 
 constructor σ () (a : Tm(U), b{x : Tm(El(a))} : Tm(U)) : Tm(U)
-
 rewrite El(σ(a, x.b{x})) --> Σ(El(a), x. El(b{x}))
 
-(*
-constructor refl    (A : Ty, x : Tm(A), y : Tm(A))
-                    ()
-                    (x = y) : Tm(Eq(A, x, y))
-
-constructor cons    (A : Ty, n : Tm(ℕ))                    
-                    (m : Tm(ℕ), x : Tm(A), y : Tm(Vec(m, A)))
-                    (n = m) : Tm(Vec(A, n))
-*)
 
 (* axiom of choice *)
 let ac : Tm(Π(U, a. Π(U, b. Π(Π(El(b), _. U), c.
@@ -78,15 +65,13 @@ let ac : Tm(Π(U, a. Π(U, b. Π(Π(El(b), _. U), c.
             Σ(Π(El(a), _. El(b)), f. Π(El(a), x. El(﹫(c, ﹫(f, x))))))))))
     := λ(a. λ(b. λ(c. λ(ϕ. mkΣ(λ(x. π₁(﹫(ϕ, x))), λ(x. π₂(﹫(ϕ, x))))))))
 
-(* type ac*)
 
 (* Natural numbers *)
-
 constructor ℕ () () : Ty
 constructor 0 () () : Tm(ℕ)
 constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
 
-destructor ℕ_ind    ()
+destructor ind_ℕ    ()
                     (n : Tm(ℕ))
                     (P {x : Tm(ℕ)} : Ty, 
                      p0 : Tm(P{0}), 
@@ -94,31 +79,28 @@ destructor ℕ_ind    ()
                 (* ------------ *)
                     : Tm(P{n})
 
-rewrite ℕ_ind(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
-rewrite ℕ_ind(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
-    ps{n, ℕ_ind(n, x. P{x}, p0, n pn. ps{n, pn})}
+rewrite ind_ℕ(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+rewrite ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
+    ps{n, ind_ℕ(n, x. P{x}, p0, n pn. ps{n, pn})}
 
 (* code in U for ℕ *)
 constructor nat () () : Tm(U)
-
 rewrite El(nat) --> ℕ
 
-(* Some functions written using ℕ_ind *)
 
-let ＋ : Tm(Π(ℕ, _. Π(ℕ, _. ℕ))) := λ(x. λ(y. ℕ_ind(y, _. ℕ, x, _ n. S(n))))
+(* Some functions written using ind_ℕ *)
+let ＋ : Tm(Π(ℕ, _. Π(ℕ, _. ℕ))) := λ(x. λ(y. ind_ℕ(y, _. ℕ, x, _ n. S(n))))
 
 let × : Tm(Π(ℕ, _. Π(ℕ, _. ℕ))) :=
-    λ(x. λ(y. ℕ_ind(y, _. ℕ, 0, _ n. ﹫(﹫(＋, n), x))))
+    λ(x. λ(y. ind_ℕ(y, _. ℕ, 0, _ n. ﹫(﹫(＋, n), x))))
 
-let fact : Tm(Π(ℕ, _. ℕ)) := λ(x. ℕ_ind(x, _. ℕ, S(0), n m. ﹫(﹫(×, S(n)), m)))
+let fact : Tm(Π(ℕ, _. ℕ)) := λ(x. ind_ℕ(x, _. ℕ, S(0), n m. ﹫(﹫(×, S(n)), m)))
 
 let fact_4 : Tm(ℕ) := ﹫(fact, S(S(S(S(0)))))
-
-
 eval fact_4
 
-(* Lists *)
 
+(* Lists *)
 constructor List () (A : Ty) : Ty
 constructor nil (A : Ty) () : Tm(List(A))
 constructor cons (A : Ty) (a : Tm(A), l : Tm(List(A))) : Tm(List(A))
@@ -145,8 +127,86 @@ let 0∷1∷2∷3∷nil : Tm(List(ℕ)) := cons(0, cons(S(0), cons(S(S(0)), cons
 
 let sum_of_list : Tm(Π(List(ℕ), _. ℕ)) :=
     λ(l. ind_List(l, _. ℕ, 0, x _ acc. ﹫(﹫(＋, x), acc)))
-
 eval ﹫(sum_of_list, 0∷1∷2∷3∷nil)
+
+
+
+(* Equality type *)
+constructor Eq () (A : Ty, x : Tm(A), y : Tm(A)) : Ty
+
+(* we use the equality premise x = y to ensure that the sort of the rule is a pattern *)
+constructor refl    (A : Ty, x : Tm(A), y : Tm(A))
+                    ()
+                    (x = y) : Tm(Eq(A, x, y))
+
+destructor J (A : Ty, x : Tm(A), y : Tm(A))
+             (t : Tm(Eq(A, x, y)))
+             (P {z : Tm(A), _ : Tm(Eq(A, x, z))} : Ty, 
+              p : Tm(P{x, refl})) 
+             : Tm(P{y, t})
+
+rewrite J(refl, y' z. P{y', z}, p) --> p 
+
+constructor eq () (a : U, x : Tm(El(a)), y : Tm(El(a))) : U 
+rewrite El(eq(a, x, y)) --> Eq(El(a), x, y)
+
+
+let sym : Tm(Π(U, a. Π(El(a), x. Π(El(a), y. Π(Eq(El(a), x, y), _. Eq(El(a), y, x))))))
+    :=  λ(a. λ(x. λ(y. λ(p. J(p, z q. Eq(El(a), z, x), refl)))))
+
+let trans : Tm(Π(U, a. Π(El(a), x. Π(El(a), y. Π(El(a), z.
+               Π(Eq(El(a), x, y), _. Π(Eq(El(a), y, z), _. Eq(El(a), x, z))))))))
+    := λ(a. λ(x. λ(y. λ(z. λ(p. λ(q. J(q, k r. Eq(El(a), x, k), p)))))))
+
+let transp : Tm(Π(U, a. Π(U, b. Π(Eq(U, a, b), _. Π(El(a), _. El(b))))))
+    := λ(a. λ(b. λ(p. λ(x. J(p, z q. El(z), x)))))
+
+
+(* Vectors *)
+constructor Vec () (A : Ty, n : Tm(ℕ)) : Ty
+
+constructor nil (A : Ty) () : Tm(Vec(A, 0))
+
+(* we use the equality premise n = m because the length is computationally relevant and 
+   thus cannot be erased *)
+constructor cons (A : Ty, n : Tm(ℕ)) (m : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, m))) (n = m) 
+            :  Tm(Vec(A, S(n)))
+                
+destructor ind_Vec  (A : Ty, n : Tm(ℕ))
+                    (l : Tm(Vec(A, n)))
+                    (P{x : Tm(ℕ), _ : Tm(Vec(A, x))} : Ty,
+                     p_nil : Tm(P{0, nil}),
+                     p_cons {n : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, n)), pl : Tm(P{n, l})} 
+                      : Tm(P{S(n), cons(n, a, l)}))
+                     (* -------------- *)
+                    : Tm(P{n, l})
+
+rewrite ind_Vec(nil, x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w}) --> p_nil
+
+rewrite ind_Vec(cons(n, a, l), x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w}) 
+        --> p_cons{n, a, l, ind_Vec(l, x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w})}
+
+constructor vec () (a : Tm(U), n : Tm(ℕ)) : Tm(U)
+rewrite El(vec(a, n)) --> Vec(El(a), n)
+
+
+let 2∷1∷0∷nil : Tm(Vec(ℕ, S(S(S(0))))) := cons(S(S(0)), S(S(0)), cons(S(0), S(0), cons(0, 0, nil)))
+
+let mk_Vec : Tm(Π(ℕ, n. Vec(ℕ, n)))
+    := λ(n. ind_ℕ(n, x. Vec(ℕ, x), nil, x y. cons(x, x, y)))
+
+check ﹫(mk_Vec, S(S(S(0)))) = 2∷1∷0∷nil
+
+
+let append : Tm(Π(U, a. 
+                Π(ℕ, n1. Π(Vec(El(a), n1), l1.
+                Π(ℕ, n2. Π(Vec(El(a), n2), l2. Vec(El(a), ﹫(﹫(＋, n2), n1))))))))
+:= λ(a. λ(n1. λ(l1. λ(n2. λ(l2. 
+    ind_Vec(l1, m _. Vec(El(a), ﹫(﹫(＋, n2), m)), l2, n a l pl. cons(﹫(﹫(＋, n2), n), a, pl)))))))
+
+let 1∷0∷nil : Tm(Vec(ℕ, S(S(0)))) := cons(S(0), S(0), cons(0, 0, nil))
+
+check 2∷1∷0∷nil = ﹫(﹫(﹫(﹫(﹫(append, nat), S(0)), cons(0, S(S(0)), nil)), S(S(0))), 1∷0∷nil)
 
 
 (* W Types *)
@@ -174,17 +234,19 @@ rewrite El(w(a, x.b{x})) --> W(El(a), x.El(b{x}))
 constructor ⊥ () () : Ty 
 destructor ind_⊥ () (x : Tm(⊥)) (P : Ty) : Tm(P)
 
+constructor ⊥c () () : Tm(U)
+rewrite El(⊥c) --> ⊥
+
 constructor ⊤ () () : Ty 
 constructor I () () : Tm(⊤)
+
+constructor ⊤c () () : Tm(U)
+rewrite El(⊤c) --> ⊤
 
 
 constructor Bool () () : Ty 
 constructor tt () () : Tm(Bool)
 constructor ff () () : Tm(Bool)
-
-destructor If () (x : Tm(Bool)) (A : Ty, B : Ty) : Ty
-rewrite If(tt, A, B) --> A 
-rewrite If(ff, A, B) --> B 
 
 destructor if () (x : Tm(Bool)) 
                  (P{x : Tm(Bool)} : Ty, 
@@ -193,17 +255,19 @@ destructor if () (x : Tm(Bool))
 rewrite if(tt, x.P{x}, a, b) --> a 
 rewrite if(ff, x.P{x}, a, b) --> b
 
-
-let Nat : Ty := W(Bool, x. If(x, ⊤, ⊥))
-
+(* different definition of Nat, using W types *)
+let Nat : Ty := W(Bool, x. El(if(x, _. U, ⊤c, ⊥c)))
 let zero : Tm(Nat) := sup(ff, λ(x. ind_⊥(x, Nat)))
-
 let succ : Tm(Π(Nat, _. Nat)) := λ(x. sup(tt, λ(_. x)))
 
 let plus : Tm(Π(Nat, _. Π(Nat, _. Nat))) 
-    := λ(x. λ(y. 
-        ind_W(x, _. Nat, b f h.
-            ﹫(if(b, x. Π(Π(If(x, ⊤, ⊥), _. Nat), _. Nat), λ(h. ﹫(succ, ﹫(h, I))), λ(_. y)), h))))
+  := λ(x. λ(y. 
+    ind_W(x, _. Nat, b f h. 
+     ﹫(if(b, 
+           x. Π(Π(El(if(x, _. U, ⊤c, ⊥c)), _. Nat), _. Nat), 
+           λ(h. ﹫(succ, ﹫(h, I))), 
+           λ(_. y)), 
+      h))))
 
 let 2_Nat : Tm(Nat) := ﹫(succ, ﹫(succ, zero))
 let 3_Nat : Tm(Nat) := ﹫(succ, 2_Nat)
