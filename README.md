@@ -4,7 +4,7 @@ This is an implementation of the generic bidirectional typing algorithm presente
 
 See examples in `examples/` to see the syntax and the available commands. 
 
-The full definition of our notion of Bidirectional Type Theories, of the bidirectional typing algorithm, and its soundness and completeness proofs are given in [1] (a link will be added here as soon as it becomes available).
+The full definition of our notion of Bidirectional Type Theories, of the bidirectional typing algorithm, and its soundness and completeness proofs are given in [1].
 
 **Disclaimer 0** Do now confuse BiTT with BITT (Brouwerian Intuitionistic
 Type Theory) [2].
@@ -26,6 +26,6 @@ The implementation of rewriting uses a form of NbE, which avoids any need to imp
 
 ## References
 
-[1] Generic bidirectional typing for dependent type theories. Thiago Felicissimo. In preparation.
+[1] [Generic bidirectional typing for dependent type theories. Thiago Felicissimo.](https://arxiv.org/abs/2307.08523)
 
 [2] [Computability Beyond Church-Turing via Choice Sequences. Mark Bickford, Liron Cohen, Robert L. Constable, Vincent Rahli](https://dl.acm.org/doi/10.1145/3209108.3209200).
