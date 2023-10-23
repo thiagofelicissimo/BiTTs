@@ -66,23 +66,30 @@ let fact : Tm(l0, Π(ℕ, _. ℕ)) := λ(x. ℕ_ind(x, l0, _. ℕ, S(0), n m. �
 let fact_4 : Tm(l0, ℕ) := ﹫(fact, S(S(S(S(0)))))
 eval fact_4
 
-
-(* universe polymorphism *)
+(* top universe *)
 sort Tyω ()
 sort Tmω (A : Tyω)
 
-constructor ∀ () (l {i : Lvl} : Lvl, A {i : Lvl} : Ty(l{i})) : Tyω
+(* puts a type in Tmω *)
+constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
+constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
+destructor  unboxω (l : Lvl, A : Ty(l)) (t : Tmω(↑ω(l, A))) () : Tm(l, A)
 
-constructor Λ (l {i : Lvl} : Lvl, A {i : Lvl} : Ty(l{i})) (t{i : Lvl} : Tm(l{i}, A{i}))
-        : Tmω(∀(i. l{i}, i. A{i}))
-destructor inst (l {i : Lvl} : Lvl, A {i : Lvl} : Ty(l{i})) (t : Tmω(∀(i. l{i}, i. A{i}))) (i : Lvl)
-        : Tm(l{i}, A{i})
+(* Tm(l, A) is a retract of Tmω(↑ω(l, A)) *)
+rewrite unboxω(boxω(t)) --> t
+
+(* universe polymorphism (quantification over levels) *)
+constructor ∀ () (A {i : Lvl} : Tyω) : Tyω
+constructor Λ (A {i : Lvl} : Tyω) (t{i : Lvl} : Tmω(A{i}))
+        : Tmω(∀(i. A{i}))
+destructor inst (A {i : Lvl} : Tyω) (t : Tmω(∀(i. A{i}))) (l : Lvl)
+        : Tmω(A{l})
 rewrite inst(Λ(i. t{i}), l) --> t{l}
 
 (* universe polymorphic id function *)
-let id_poly : Tmω(∀(i. lS(i), i. Π(U, a. Π(↑(El(a)), _. ↑(El(a))))))
-    :=  Λ(i. λ(a. λ(x. x)))
+let id_poly : Tmω(∀(i. ↑ω(lS(i), Π(U, a. Π(↑(El(a)), _. ↑(El(a)))))))
+    :=  Λ(i. boxω(λ(a. λ(x. x))))
 
 (* applying it to 0 *)
-let 0' : Tm(l0, ℕ) := unbox(﹫(﹫(inst(id_poly, l0), c(ℕ)), box(0)))
+let 0' : Tm(l0, ℕ) := unbox(﹫(﹫(unboxω(inst(id_poly, l0)), c(ℕ)), box(0)))
 check 0' = 0
