@@ -1,5 +1,7 @@
 open Format
 
+(* syntax of terms, using de bruijn indices *)
+
 type tm = 
   | Var of int (* index *)
   | Meta of int * subst 
@@ -9,6 +11,7 @@ type tm =
 
 and subst = tm list
 
+(* we also store the number of variables bound in the argument *)
 and msubst = (int * tm) list
 
 type ctx = tm list
@@ -21,10 +24,14 @@ type p_tm =
   | Const of string * p_msubst
 and p_msubst = (int * p_tm) list
 
+(* schematic rules *)
 type schem_rule = 
   | Sort of mctx 
   | Const of mctx * mctx * p_tm 
   | Dest of mctx * p_tm * mctx * tm  
+
+
+(* schematic rules table *)
 
 module RuleTbl = Map.Make(String)
 type schem_rules = schem_rule RuleTbl.t
@@ -32,10 +39,15 @@ let schem_rules : schem_rules ref = ref RuleTbl.empty
 
 type rew_rule = p_msubst * tm
 
+
+(* rewrite rules table *)
+
 module RewTbl = Map.Make(String)
 type rew_rules = (rew_rule list) RewTbl.t
 let rew_rules : rew_rules ref = ref RewTbl.empty
 
+
+(* pretty printing functions *)
 
 let separator fmt () = 
   fprintf fmt ", "

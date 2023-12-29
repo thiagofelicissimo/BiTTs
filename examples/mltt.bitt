@@ -35,6 +35,8 @@ rewrite ﹫(λ(x. t{x}), u) --> t{u}
 constructor π () (a : Tm(U), b{_ : Tm(El(a))} : Tm(U)) : Tm(U)
 rewrite El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
+(* polymorphic identity at U *)
+let idU : Tm(Π(U, a. Π(El(a), _. El(a)))) := λ(a. λ(x. x))
 
 (* Dependent sums *)
 constructor Σ () (A : Ty, B{x : Tm(A)} : Ty) : Ty
@@ -174,6 +176,9 @@ destructor if () (x : Tm(Bool))
                   b : Tm(P{ff})) : Tm(P{x})
 rewrite if(tt, x.P{x}, a, b) --> a 
 rewrite if(ff, x.P{x}, a, b) --> b
+
+constructor bool () () : Tm(U)
+rewrite El(bool) --> Bool
 
 (* different definition of Nat, using W types *)
 let Nat : Ty := W(Bool, x. El(if(x, _. U, ⊤c, ⊥c)))

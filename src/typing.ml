@@ -7,6 +7,7 @@ exception Not_a_sort
 exception Metas_not_supported
 exception Length_mismatch
 
+(* helper functions to get a schematic rule *)
 let get_drule (x : schem_rule) = 
   match x with
   | Dest(mctx, p_ty, mctx', ty) -> (mctx, p_ty, mctx', ty)
@@ -22,6 +23,13 @@ let get_srule (x : schem_rule) =
   | Sort(mctx) -> mctx
   | _ -> assert false
 
+
+(* --------- beginning of the typechecking algorithm --------- *)
+
+(* following other implementations of bidirectional typing, we tightly 
+   itegrate it with the NbE algorithm by asking for all inputs (other 
+   than the subject) to be already in the syntax of values. *)
+
 let rec infer (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =     
   match t with 
   | Var(n) -> List.nth v_ctx n
@@ -32,7 +40,9 @@ let rec infer (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =
     let result = check_msubst v_ctx v_subst v_msubst msubst mctx in     
     eval_tm ty result []
   | Def(d) -> (DefTbl.find d !defs).ty
-  | Meta(_) -> raise Metas_not_supported
+  | Meta(_) -> 
+    (* we only typecheck terms without metas *)
+    raise Metas_not_supported 
   | Const(_) -> raise Not_inferable
 
 and check (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) (ty : v_tm) =   
@@ -45,7 +55,6 @@ and check (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) (ty : v_tm) =
     ignore @@ check_msubst v_ctx v_subst v_msubst msubst mctx
   | Meta(_) -> raise Metas_not_supported
 
-  
 and check_msubst (v_ctx : v_ctx) (v_subst : v_subst) (v_msubst : v_msubst) (msubst : msubst) (mctx : mctx) : v_msubst = 
   match msubst, mctx with 
   | [], [] -> v_msubst

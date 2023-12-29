@@ -14,13 +14,6 @@ let blue = colored 6
 let green = colored 2
 let red = colored 1
 
-(* 
-let violet = colored 5
-let green = colored 2 
-let typing_error () = Format.printf "%s: " (red "Typing error")
-let equality_error () = Format.printf "%s: " (red "Equality checking error")
-let matching_error () = Format.printf "%s: " (red "Matching error") *)
-
 let syntax_error () = Format.printf "%s: " (red "Syntax error")
 
 let current_entry : C.entry option ref = ref None

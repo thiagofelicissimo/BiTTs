@@ -1,6 +1,8 @@
 module T = Term
 open Format
 
+(* syntax of values, using de bruijn levels and closures *)
+
 type v_tm = 
   | Var of int (* level *)
   | Const of string * v_msubst 
@@ -8,6 +10,7 @@ type v_tm =
 
 and v_subst = v_tm list
 
+(* an argument is either fully evaluated or a closure *)
 and v_arg = 
   | Value of v_tm 
   | Closure of int * T.tm * v_msubst * v_subst
@@ -15,11 +18,17 @@ and v_msubst = v_arg list
 
 type v_ctx = v_tm list
 
+
+(* top-level definitions table *)
+
 module DefTbl = Map.Make(String)
 
 type def = {rhs : v_tm; ty : v_tm}
 type defs = def DefTbl.t
 let defs : defs ref = ref DefTbl.empty
+
+
+(* pretty printing functions *)
 
 let rec pp_vterm fmt t = 
   match t with 

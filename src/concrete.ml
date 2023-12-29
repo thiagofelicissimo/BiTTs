@@ -3,9 +3,9 @@ module T = Term
 module V = Value
 module Ty = Typing
 
-
+(* concrete syntax *)
 type tm = 
-  | NotApplied of string 
+  | NotApplied of string (* either a variable or a meta/const with no args *)
   | Meta of string * subst (* invariant: subst <> [] *)
   | Symb of string * msubst
 
@@ -25,6 +25,7 @@ type entry =
   | Eval of tm
   | Eq of tm * tm
 
+(* calculates the corresponding indice of a variable name in the given scope *)
 let get_db name scope =
   let rec get_db' scope name k =
     match scope with
@@ -33,10 +34,11 @@ let get_db name scope =
     | _ :: scope -> get_db' scope name (k + 1) in
   get_db' scope name 0  
 
-exception Todo
 exception Name_not_in_scope
 exception Dest_not_applied
 exception Dest_binds_first_arg
+
+(* scoping functions *)
 
 let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm = 
   (* in the following, we consider that the variable scope shadows the 
@@ -96,6 +98,8 @@ exception Not_a_patt
 let subst_to_scope (subst : subst) : string list = 
   List.map (fun t -> match t with | NotApplied(name) -> name |_ -> raise Not_a_patt) subst
 
+(* pattern scoping *)
+
 let rec scope_p_tm (t : tm) : T.p_tm * string list = 
   match t with   
   | NotApplied(name) -> 
@@ -121,7 +125,13 @@ and scope_p_msubst (msubst : msubst) : T.p_msubst * string list =
   | (names, Meta(name, subst)) :: msubst' when subst_to_scope subst = names -> 
     let msubst'_p, mscope = scope_p_msubst msubst' in     
     (List.length names, Meta) :: msubst'_p, name :: mscope
-  | (names, _) :: _ -> raise Not_a_patt (* matching inside binders not allowed *)
+  | (names, _) :: _ -> 
+    (* matching inside binders not allowed, as this would require 
+       entering a closure, matching it, and then reading back the result.
+       therefore, any binder must be immediately followed by a meta.
+       example: lambda(x. X{x}) OK, lambda(x. succ(X{x})) not OK *)        
+    raise Not_a_patt 
+
 
 (* PRETTY PRINTING *)
 

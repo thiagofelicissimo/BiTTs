@@ -5,7 +5,8 @@ exception Todo
 exception Matched of v_msubst * tm
 exception Match_failure
 
-(* MATCHING *)
+(* MATCHING : we match a tm/msubst value against a tm/msubst pattern, 
+   which yields a msubst value *)
 
 let rec match_tm (p_tm : p_tm) (v_tm : v_tm) : v_msubst =  
   match p_tm, v_tm with 
@@ -26,7 +27,9 @@ and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
   | _ -> raise Match_failure
 
 
-(* EVAL *)
+(* EVAL : we evaluate a tm/subst/msubst to a tm/subst/msubst value, under
+   the environment given by a subst value (mapping occuring vars to values) 
+   and a msubst value (mapping occuring metas to values or closures) *)
 
 let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =   
   match t with
@@ -71,7 +74,8 @@ let rec eval_ctx (ctx : ctx) (v_msubst : v_msubst) (depth : int) : v_ctx * v_sub
     (v_ty :: v_ctx, Var(depth) :: v_subst, depth + 1)
       
 
-(* EQUALITY CHECK *)
+(* EQUALITY CHECK : we check for equality while recursively entering closures
+   and checking their corresponding values for equality *)
 
 exception Equality_check_error
 
@@ -104,7 +108,8 @@ and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : un
   
 
 
-(* READ_BACK *)
+(* READ_BACK : reads back a value into its corresponding (deep) normal form
+   in the syntax of regular terms/msubsts *)
 
 let rec read_back_tm (depth : int) (t : v_tm) : tm =
   match t with 

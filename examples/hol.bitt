@@ -32,6 +32,11 @@ let K : Prf(∀(prop, P. ∀(prop, Q. ⇒(P, ⇒(Q, P)))))
 let ∧ : Tm(→(prop, →(prop, prop)))
     := λ(p. λ(q. ∀(prop, r. ⇒(⇒(p, ⇒(q, r)), r))))
 
+(* note that because the following are top-level definitions and not symbol
+   declarations, there is no support for omitting some of its arguments.
+   in the future, it would be interesting to allow defining constructors 
+   and destructors that are "implemented" by top-level definitions *)
+
 let in∧ : Prf(∀(prop, P. ∀(prop, Q. ⇒(P, ⇒(Q, ﹫(﹫(∧, P), Q))))))
     := in∀(P. in∀(Q. in⇒(p. in⇒(q. in∀(R. in⇒(ϕ. el⇒(el⇒(ϕ, p), q)))))))
 
