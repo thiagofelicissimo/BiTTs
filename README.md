@@ -2,10 +2,9 @@
 
 This is an implementation of the generic bidirectional typing algorithm presented in [1].
 
-**Disclaimer 0** Do now confuse BiTT with BITT (Brouwerian Intuitionistic
-Type Theory) [2].
+**Disclaimer 0** Do now confuse BiTT with BITT (Brouwerian Intuitionistic Type Theory) [2].
 
-**Disclaimer 1** This is still a prototype implementation and some parts of it should still be improved in the future, such as error handling.
+**Disclaimer 1** This is still a prototype implementation and some parts of it should be improved in the future, such as error handling.
 
 ## Getting Started
 
@@ -30,8 +29,6 @@ Once all the dependencies are installed it suffices to run `make examples`, whic
 First ensure that you have [Docker](https://docs.docker.com/get-docker/) installed. Then, in the directory `docker/` run `docker build -t bitts .` and then `docker run -it bitts`, which should then give you access to a terminal. Now it suffices to run `cd BiTTs` and `make examples`, which should output some typechecking messages.
 
 ## How to use
-
-
 
 This project implements the generic bidirectional typing algorithm proposed in [1]. Therefore, when using it one first specifies a type theory to work in and then writes terms inside this theory, which are typechecked by the implementation.
 
@@ -119,7 +116,7 @@ We provide the following examples of theories in the directory `examples/`:
 
 ## Implementation
 
-The kernel of the implementation is composed of the files `term.ml`, `value.ml`, `eval.ml` and `typing.ml`, which together make around 350 lines. The whole implementation amounts to around 750 lines (not counting interfaces).
+The core of the implementation is composed of the files `term.ml`, `value.ml`, `eval.ml` and `typing.ml`, which together make around 350 lines. The whole implementation amounts to around 750 lines (not counting interfaces).
 
 The implementation of rewriting uses a form of untyped NbE with de Bruijn indices for terms and levels for values, which avoids any need to implement functions for shifting indices and for substitution. It is inspired by the following works.
 
