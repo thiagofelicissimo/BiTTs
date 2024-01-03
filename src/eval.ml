@@ -1,7 +1,6 @@
 open Term
 open Value
 
-exception Todo
 exception Matched of v_msubst * tm
 exception Match_failure
 

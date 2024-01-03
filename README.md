@@ -119,7 +119,7 @@ We provide the following examples of theories in the directory `examples/`:
 
 ## Implementation
 
-The kernel of the implementation is composed of the files `term.ml`, `value.ml`, `eval.ml` and `typing.ml`, which together make around 350 lines. The whole implementation amounts to around 750 lines.
+The kernel of the implementation is composed of the files `term.ml`, `value.ml`, `eval.ml` and `typing.ml`, which together make around 350 lines. The whole implementation amounts to around 750 lines (not counting interfaces).
 
 The implementation of rewriting uses a form of untyped NbE with de Bruijn indices for terms and levels for values, which avoids any need to implement functions for shifting indices and for substitution. It is inspired by the following works.
 
