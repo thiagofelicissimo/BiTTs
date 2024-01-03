@@ -1,0 +1,9 @@
+We describe two ways of building the project. We recommend trying the first option before using the docker image, which its probably a bit of an overkill solution given the small number of dependencies required.
+
+### Build from scratch 
+
+Once all the dependencies (specified in the README and on `REQUIREMENTS.txt`) are installed it suffices to run `make examples`, which should output some typechecking messages.
+
+### Build with Docker
+
+First ensure that you have [Docker](https://docs.docker.com/get-docker/) installed. Then, in the directory `docker/` run `docker build -t bitts .` and then `docker run -it bitts`, which should then give you access to a terminal. Now it suffices to run `cd BiTTs` and `make examples`, which should output some typechecking messages.
