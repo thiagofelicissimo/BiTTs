@@ -19,6 +19,7 @@ term:
   | id=IDENT { NotApplied(id) }
   | id=IDENT LBRACK subst=subst RBRACK { Meta(id, subst) }  
   | id=IDENT LPAR msubst=msubst RPAR { Symb(id, msubst) }
+  | LSQB ty=term RSQB t=term { Ascr(t, ty) }  
   
 subst:
   | e=separated_list(COMMA, term) { List.rev e }

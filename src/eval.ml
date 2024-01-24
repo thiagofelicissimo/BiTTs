@@ -33,6 +33,7 @@ and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
 let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =   
   match t with
   | Var(n) -> List.nth v_subst n 
+  | Ascr(t, ty) -> eval_tm t v_msubst v_subst
   | Meta(n, subst) -> 
     begin match List.nth v_msubst n with 
     | Value(v) -> v

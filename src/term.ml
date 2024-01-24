@@ -8,6 +8,7 @@ type tm =
   | Const of string * msubst 
   | Dest of string * tm * msubst 
   | Def of string (* top-level def *)
+  | Ascr of tm * tm (* t :: ty *)
 
 and subst = tm list
 
@@ -63,6 +64,7 @@ let rec pp_term fmt t =
   | Const(name, []) -> fprintf fmt "%s" name
   | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
   | Def(name) -> fprintf fmt "%s" name
+  | Ascr(t, ty) -> fprintf fmt "[%a] %a" pp_term ty pp_term t
 
 and pp_subst fmt subst = 
   pp_print_list ~pp_sep:separator pp_term fmt (List.rev subst)

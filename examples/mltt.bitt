@@ -102,6 +102,13 @@ let fact_4 : Tm(ℕ) := ﹫(fact, S(S(S(S(0)))))
 eval fact_4
 
 
+(* a checkable term t becomes inferable if annotated 
+   with a checkable sort T, as in [T] t  
+   redexes can be written this way *)      
+let redex : Tm(ℕ) := ﹫([Tm(Π(ℕ, _. ℕ))] λ(x. x), 0)
+eval redex
+
+
 (* Lists *)
 constructor List () (A : Ty) : Ty
 constructor nil (A : Ty) () : Tm(List(A))

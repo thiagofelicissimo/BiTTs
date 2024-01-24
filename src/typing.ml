@@ -40,6 +40,11 @@ let get_srule (x : schem_rule) =
 
 let rec infer (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =     
   match t with 
+  | Ascr(t, ty) -> 
+    check_sort v_ctx v_subst ty;
+    let v_ty = eval_tm ty [] v_subst in 
+    check v_ctx v_subst t v_ty; 
+    v_ty
   | Var(n) -> List.nth v_ctx n
   | Dest(d, u, msubst) -> 
     let p_sort, args_mctx, sort = get_drule (RuleTbl.find d !schem_rules) in 
@@ -57,7 +62,7 @@ let rec infer (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =
 
 and check (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) (sort : v_tm) =   
   match t with 
-  | Var(_) | Dest(_) | Def(_) -> 
+  | Var(_) | Dest(_) | Def(_) | Ascr(_) -> 
     let sort' = infer v_ctx v_subst t in equal_tm sort sort' (List.length v_subst)
   | Const(c, msubst) -> 
       let num_ixs, args_mctx, inst_msubst, p_sort = 
@@ -81,7 +86,7 @@ and check_msubst (v_ctx : v_ctx) (v_subst : v_subst) (v_msubst : v_msubst) (msub
     t' :: v_msubst
   | _ -> raise Length_mismatch
 
-let check_sort (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) = 
+and check_sort (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) = 
   match t with 
   | Const(c, msubst) -> 
     let mctx = get_srule (RuleTbl.find c !schem_rules) in 

@@ -8,6 +8,7 @@ type tm =
   | NotApplied of string (* either a variable or a meta/const with no args *)
   | Meta of string * subst (* invariant: subst <> [] *)
   | Symb of string * msubst
+  | Ascr of tm * tm
 
 and subst = tm list 
 and msubst = (string list * tm) list
@@ -49,6 +50,10 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
   (* in the following, we consider that the variable scope shadows the 
      metavariable scope, which shadows the signature *)
   match t with 
+  | Ascr(t, ty) -> 
+    let t' = scope_tm t mscope scope in 
+    let ty' = scope_tm ty mscope scope in 
+    T.Ascr(t', ty')
   | NotApplied(name) -> 
     begin match get_db name scope, get_db name mscope with 
     | None, Some i -> T.Meta(i, [])    
@@ -160,6 +165,7 @@ let rec pp_term fmt t =
   | NotApplied(name) -> fprintf fmt "%s" name 
   | Meta(name, subst) -> fprintf fmt "%s{%a}" name pp_subst subst
   | Symb(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
+  | Ascr(t, ty) -> fprintf fmt "[%a] %a" pp_term t pp_term ty
 
 and pp_subst fmt subst =
   pp_print_list ~pp_sep:T.separator pp_term fmt (List.rev subst)
