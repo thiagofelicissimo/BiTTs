@@ -8,7 +8,7 @@ constructor λ   (A : Ty, B{x : Tm(A)} : Ty)
                 (t{x : Tm(A)} : Tm(B{x})) 
                 : Tm(Π(A, x. B{x}))
 destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty) 
-                (t : Tm(Π(A, x. B{x})))
+                [t : Tm(Π(A, x. B{x}))]
                 (u : Tm(A))
                 : Tm(B{u})
 
@@ -21,7 +21,7 @@ constructor 0 () () : Tm(ℕ)
 constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
 
 destructor ℕ_ind    ()
-                    (n : Tm(ℕ))
+                    [n : Tm(ℕ)]
                     (P {x : Tm(ℕ)} : Ty, 
                      p0 : Tm(P{0}), 
                      ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}))

@@ -16,14 +16,19 @@ type ctx = (string * tm) list
 
 type mctx = (string * ctx * tm) list
 
+type imctx = (string * tm * tm) list
+
 type entry =
   | Let of string * tm * tm
   | Sort of string * mctx 
-  | Cons of string * mctx * mctx * tm 
-  | Dest of string * mctx * string * tm * mctx * tm 
+  | Cons of string * mctx * mctx * imctx * tm 
+    (* c (Xi_p; Xi_c; Vi/Xi_i) : T *)
+  | Dest of string * mctx * mctx * string * tm * mctx * tm 
+    (* d (Xi_p; Xi_i; x : T; Xi_d) : U *)
   | Rew of tm * tm  
   | Eval of tm
   | Eq of tm * tm
+
 
 (* calculates the corresponding indice of a variable name in the given scope *)
 let get_db name scope =
@@ -133,6 +138,13 @@ and scope_p_msubst (msubst : msubst) : T.p_msubst * string list =
     raise Not_a_patt 
 
 
+let mctx_of_imctx (imctx : imctx) : mctx = 
+  List.map (fun (id, tm, ty) -> (id, [], ty)) imctx
+
+let msubst_of_imctx (imctx : imctx) : msubst = 
+  List.map (fun (id, tm, ty) -> ([], tm)) imctx  
+
+
 (* PRETTY PRINTING *)
 
 (* pre-condition: scope <> [] *)
@@ -168,15 +180,22 @@ let pp_mctx fmt mctx =
     else fprintf fmt "%s{%a} : %a" name pp_ctx ctx pp_term ty in  
   pp_print_list ~pp_sep:T.separator pp_mctx_entry fmt (List.rev mctx)
 
+
+let pp_imctx fmt imctx = 
+  let pp_imctx_entry fmt (name, tm, ty) = 
+    fprintf fmt "%a / %s : %a" pp_term tm name pp_term ty in  
+  pp_print_list ~pp_sep:T.separator pp_imctx_entry fmt (List.rev imctx)
+  
+
 let pp_entry fmt entry = 
   match entry with   
   | Sort(name, mctx) -> fprintf fmt "sort %s (%a)@." name pp_mctx mctx 
-  | Cons(name, mctx1, mctx2, ty) -> 
-    fprintf fmt "constructor %s (%a) (%a) : %a@." 
-      name pp_mctx mctx1 pp_mctx mctx2 pp_term ty
-  | Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) -> 
-    fprintf fmt "destructor %s (%a) (%s : %a) (%a) : %a@." 
-    name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty
+  | Cons(name, mctx1, mctx2, imctx, ty) -> 
+    fprintf fmt "constructor %s (%a) (%a) (%a) : %a@." 
+      name pp_mctx mctx1 pp_mctx mctx2 pp_imctx imctx pp_term ty
+  | Dest(name, mctx1, mctx2, name_arg, ty_arg, mctx3, ty) -> 
+    fprintf fmt "destructor %s (%a) (%a) (%s : %a) (%a) : %a@." 
+    name pp_mctx mctx1 pp_mctx mctx2 name_arg pp_term ty_arg pp_mctx mctx3 pp_term ty
   | Rew(lhs, rhs) -> 
     fprintf fmt "rewrite %a --> %a@." pp_term lhs pp_term rhs
   | Let(name, ty, t) -> fprintf fmt "let %s : %a := %a@." name pp_term ty pp_term t    

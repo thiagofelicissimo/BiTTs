@@ -13,7 +13,7 @@ sort Tm (l : Lvl, A : Ty(l))
 (* (Weak) Coquand Universes *)
 constructor U (l : Lvl) () : Ty(lS(l))
 constructor c (l : Lvl) (A : Ty(l)) : Tm(lS(l), U)
-destructor El (l : Lvl) (t : Tm(lS(l), U)) () : Ty(l)
+destructor El (l : Lvl) [t : Tm(lS(l), U)] () : Ty(l)
 
 (* Ty(l) is a retract of Tm(U(l)) *)
 rewrite El(c(A)) --> A
@@ -22,7 +22,7 @@ rewrite El(c(A)) --> A
 (* Weak cumulativity *)
 constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(lS(l))
 constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(lS(l), ↑(A))
-destructor unbox (l : Lvl, A : Ty(l)) (t : Tm(lS(l), ↑(A))) () : Tm(l, A)
+destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(lS(l), ↑(A))] () : Tm(l, A)
 
 (* Tm(l, A) is a retract of Tm(lS(l), ↑(A)) *)
 rewrite unbox(box(t)) --> t
@@ -31,7 +31,7 @@ rewrite unbox(box(t)) --> t
 constructor Π (l : Lvl) (A : Ty(l), B {x : Tm(l, A)} : Ty(l)) : Ty(l)
 constructor λ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) (t{x : Tm(l, A)} : Tm(l, B{x}))
         : Tm(l, Π(A, x. B{x}))
-destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) (t : Tm (l, Π(A, x. B{x}))) (u : Tm(l, A))
+destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) [t : Tm (l, Π(A, x. B{x}))] (u : Tm(l, A))
         : Tm(l, B{u})
 
 rewrite ﹫(λ(x. t{x}), u) --> t{u}
@@ -42,7 +42,7 @@ constructor 0 () () : Tm(l0, ℕ)
 constructor S () (_ : Tm(l0, ℕ)) : Tm(l0, ℕ)
 
 destructor ℕ_ind    ()
-                    (n : Tm(l0, ℕ))
+                    [n : Tm(l0, ℕ)]
                     (i : Lvl, 
                      P {x : Tm(l0, ℕ)} : Ty(i), 
                      p0 : Tm(i, P{0}), 
@@ -73,7 +73,7 @@ sort Tmω (A : Tyω)
 (* puts a type in Tmω *)
 constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
 constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
-destructor  unboxω (l : Lvl, A : Ty(l)) (t : Tmω(↑ω(l, A))) () : Tm(l, A)
+destructor  unboxω (l : Lvl, A : Ty(l)) [t : Tmω(↑ω(l, A))] () : Tm(l, A)
 
 (* Tm(l, A) is a retract of Tmω(↑ω(l, A)) *)
 rewrite unboxω(boxω(t)) --> t
@@ -82,7 +82,7 @@ rewrite unboxω(boxω(t)) --> t
 constructor ∀ () (A {i : Lvl} : Tyω) : Tyω
 constructor Λ (A {i : Lvl} : Tyω) (t{i : Lvl} : Tmω(A{i}))
         : Tmω(∀(i. A{i}))
-destructor inst (A {i : Lvl} : Tyω) (t : Tmω(∀(i. A{i}))) (l : Lvl)
+destructor inst (A {i : Lvl} : Tyω) [t : Tmω(∀(i. A{i}))] (l : Lvl)
         : Tmω(A{l})
 rewrite inst(Λ(i. t{i}), l) --> t{l}
 

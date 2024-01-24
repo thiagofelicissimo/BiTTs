@@ -26,10 +26,11 @@ and p_msubst = (int * p_tm) list
 
 (* schematic rules *)
 type schem_rule = 
-  | Sort of mctx 
-  | Const of mctx * mctx * p_tm 
-  | Dest of mctx * p_tm * mctx * tm  
-
+  | Sort of mctx
+  | Const of int * mctx * msubst * p_tm    
+            (* num_ixs, args_mctx, inst_msubst, p_sort *)
+  | Dest of p_tm * mctx * tm
+            (* p_sort, args_mctx, sort *)
 
 (* schematic rules table *)
 

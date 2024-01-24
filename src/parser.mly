@@ -5,8 +5,8 @@
 %}
 %token EOF
 %token CONS DEST SORT REW LET EVAL CHECK
-%token LPAR RPAR LBRACK RBRACK
-%token COLON DOT COMMA REDUCES DEF EQUAL
+%token LPAR RPAR LBRACK RBRACK LSQB RSQB
+%token COLON DOT COMMA REDUCES DEF EQUAL SLASH
 %token <string> IDENT
 
 %start program
@@ -48,13 +48,22 @@ mctx_entry:
 mctx: 
   | LPAR e=separated_list(COMMA, mctx_entry) RPAR { List.rev e }  
 
+imctx_entry:
+  | t=term SLASH id=IDENT COLON ty=term { (id, t, ty) }
+
+imctx:
+  | LPAR e=separated_list(COMMA, imctx_entry) RPAR  { List.rev e }
 
 entry:
   | SORT id=IDENT mctx=mctx { Sort(id, mctx)}
   | CONS id=IDENT mctx1=mctx mctx2=mctx COLON ty=term 
-    { Cons(id, mctx1, mctx2, ty) }    
-  | DEST id=IDENT mctx1=mctx LPAR id_arg=IDENT COLON ty_arg=term RPAR mctx2=mctx COLON ty=term 
-    { Dest(id, mctx1, id_arg, ty_arg, mctx2, ty) }
+    { Cons(id, mctx1, mctx2, [], ty) }      
+  | CONS id=IDENT mctx1=mctx mctx2=mctx imctx=imctx COLON ty=term 
+    { Cons(id, mctx1, mctx2, imctx, ty) }    
+  | DEST id=IDENT mctx1=mctx LSQB id_arg=IDENT COLON ty_arg=term RSQB mctx3=mctx COLON ty=term 
+    { Dest(id, mctx1, [], id_arg, ty_arg, mctx3, ty) }  
+  | DEST id=IDENT mctx1=mctx mctx2=mctx LSQB id_arg=IDENT COLON ty_arg=term RSQB mctx3=mctx COLON ty=term 
+    { Dest(id, mctx1, mctx2, id_arg, ty_arg, mctx3, ty) }
   | REW lhs=term REDUCES rhs=term { Rew(lhs, rhs) }
   | LET id=IDENT COLON ty=term DEF tm=term
     { Let(id, ty, tm) }  

@@ -22,7 +22,7 @@ let keyword_or_ident =
 
 let space = [%sedlex.regexp? Chars " \t\n\r"]
 
-let forbidden_letter1 = [%sedlex.regexp? Chars " +-*:,\r\t\n(){}:.`\"@|/"]
+let forbidden_letter1 = [%sedlex.regexp? Chars " +-*:,\r\t\n(){}[]:.`\"@|/"]
 let forbidden_letter = [%sedlex.regexp? Chars " *:=>,;\r\t\n(){}[]:.`\"@|/"]
 let name = [%sedlex.regexp? (Compl forbidden_letter1) | Star (Compl forbidden_letter1)]
 
@@ -32,7 +32,9 @@ let rec token lb =
   | space -> token lb
   | "(*" -> comment token 0 lb
   | "(" -> LPAR
-  | ")" -> RPAR  
+  | ")" -> RPAR
+  | "[" -> LSQB
+  | "]" -> RSQB
   | "{"  -> LBRACK
   | "}"  -> RBRACK
   | ":" -> COLON
@@ -41,6 +43,7 @@ let rec token lb =
   | "-->" -> REDUCES
   | ":=" -> DEF
   | "=" -> EQUAL
+  | "/" -> SLASH
   | name -> keyword_or_ident (Utf8.lexeme lb)
   | _ -> raise Lexing_error
 and comment next i lb =
