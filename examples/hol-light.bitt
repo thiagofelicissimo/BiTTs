@@ -1,0 +1,80 @@
+sort Ty ()
+sort Tm (A : Ty)
+
+(* all types are inhabited *)
+constructor el (A : Ty) () : Tm(A)
+
+constructor prop () () : Ty
+sort Prf (t : Tm(prop))
+
+(* simple function type *)
+constructor → () (A : Ty, B : Ty) : Ty
+constructor λ (A : Ty, B : Ty) (t{x : Tm(A)} : Tm(B)) : Tm(→(A, B))
+destructor ﹫ (A : Ty, B : Ty) [t : Tm(→(A, B))] (u : Tm(A)) : Tm(B)
+rewrite ﹫(λ(x. t{x}), u) --> t{u}
+
+constructor ε (A : Ty) (P {_ : Tm(A)} : Tm(prop)) : Tm(A)
+
+(* equality *)
+(* note that these rules are not harmonious: we cannot reduce all cuts 
+   because the elimination rules are more powerful than the introduction 
+   rules. the interaction between fun_ext and mk_comb is particularly 
+   problematic. *)
+
+constructor Eq () (A : Ty, x : Tm(A), y : Tm(A)) : Tm(prop)
+
+constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Prf(Eq(A, x, y))
+
+constructor sym (A : Ty, x : Tm(A), y : Tm(A)) (e : Prf(Eq(A, y, x))) : Prf(Eq(A, x, y))
+
+constructor trans (A : Ty, x : Tm(A), z : Tm(A))
+                  (y : Tm(A), x~y : Prf(Eq(A, x, y)), y~z : Prf(Eq(A, y, z)))
+                  : Prf(Eq(A, x, z))
+
+constructor fun_ext (A : Ty, B : Ty, f : Tm(→(A, B)), g : Tm(→(A, B))) 
+                    (e{x : Tm(A)} : Prf(Eq(B, ﹫(f, x), ﹫(g, x))))
+                    : Prf(Eq(→(A, B), f, g))
+
+constructor prop_ext (P : Tm(prop), Q : Tm(prop))
+                     (p⇒q {p : Prf(P)} : Prf(Q),
+                      q⇒p {q : Prf(Q)} : Prf(P))
+                      : Prf(Eq(prop, P, Q))
+
+destructor eq_mp (P : Tm(prop), Q : Tm(prop))
+                 [e : Prf(Eq(prop, P, Q))]
+                 (p : Prf(P))
+                 : Prf(Q)
+
+destructor mk_comb (A : Ty, B : Ty, f : Tm(→(A, B)), g : Tm(→(A, B)))
+                   [e1 : Prf(Eq(→(A, B), f, g))]
+                   (x : Tm(A), y : Tm(A), e2 : Prf(Eq(A), x, y))
+                   : Prf(Eq(B, ﹫(f, x), ﹫(g, y)))
+
+
+constructor  ∀ () (A : Ty, P{x : Tm(A)} : Tm(prop)) : Tm(prop)
+constructor in∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) (t{x : Tm(A)} : Prf(P{x})) : Prf(∀(A, x. P{x}))
+destructor  el∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) [t : Prf(∀(A, x. P{x}))] (u : Tm(A)) : Prf(P{u})
+
+constructor ⇒ () (P : Tm(prop), Q : Tm(prop)) : Tm(prop)
+constructor in⇒ (P : Tm(prop), Q : Tm(prop)) (q{p : Prf(P)} : Prf(Q)) : Prf(⇒(P, Q))
+destructor  el⇒ (P : Tm(prop), Q : Tm(prop)) [pq : Prf(⇒(P, Q))] (p : Prf(P)) : Prf(Q)
+
+constructor T () () : Tm(prop)
+constructor Tᵢ () () : Prf(T)
+
+constructor ∧ () (P : Tm(prop), Q : Tm(prop)) : Tm(prop)
+constructor ∧ᵢ  (P : Tm(prop), Q : Tm(prop)) (p : Prf(P), q : Prf(Q)) : Prf(∧(P, Q))
+destructor  ∧ₑ₁ (P : Tm(prop), Q : Tm(prop)) [pq : Prf(∧(P, Q))] () : Prf(P)
+destructor  ∧ₑ₂ (P : Tm(prop), Q : Tm(prop)) [pq : Prf(∧(P, Q))] () : Prf(Q)
+
+constructor ∃ () (A : Ty, P{x : Tm(A)} : Tm(prop)) : Tm(prop)
+constructor ∃ᵢ (A : Ty, P{x : Tm(A)} : Tm(prop)) (x : Tm(A), p : Prf(P{x})) : Prf(∃(A, x. P{x}))
+destructor  ∃ₑ (A : Ty, P{x : Tm(A)} : Tm(prop)) [e : Prf(∃(A, x. P{x}))]
+               (R : Tm(prop), r{x : Tm(A), p : Prf(P{x})} : Prf(R)) : Prf(R)
+
+constructor ∨ () (P : Tm(prop), Q : Tm(prop)) : Tm(prop)
+constructor ∨ᵢ₁  (P : Tm(prop), Q : Tm(prop)) (p : Prf(P)) : Prf(∨(P, Q))
+constructor ∨ᵢ₂  (P : Tm(prop), Q : Tm(prop)) (q : Prf(Q)) : Prf(∨(P, Q))
+destructor  ∨ₑ   (P : Tm(prop), Q : Tm(prop)) [e : Prf(∨(P, Q))] 
+                 (R : Tm(prop), r1{p : Prf(P)} : Prf(R), r2{q : Prf(Q)} : Prf(R)) : Prf(R)
+            

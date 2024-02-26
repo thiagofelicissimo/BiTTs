@@ -1,0 +1,94 @@
+(* MLTT with a cumulative hierarchy of Tarski-style universes and universe polymorphism *)
+
+(* variant in which the two arguents of π must be in the same universe,
+   so if a : Tm(U(i)) and b : Tm(U(j)) with j < i, we must lift b from U(j)
+   to U(i) before applying π to it *)
+
+
+(* Judgment forms *)
+sort Ty ()
+sort Tm (A : Ty)
+
+sort Lvl ()
+constructor 0ₗ () () : Lvl
+constructor Sₗ () (_ : Lvl) : Lvl
+
+
+(* Taski-style universe *)
+constructor U () (l : Lvl) : Ty
+destructor El (l : Lvl) [A : Tm(U(l))] () : Ty
+
+
+(* we must declare the level l as an index, otherwise l is omitted from the
+   syntax and we cannot write the rule  El(𝑢) --> U(?) because we don't know
+   what to put in the place of ? *)
+constructor 𝑢 () (l : Lvl) (Sₗ(l) / l : Lvl) : Tm(U(l))
+rewrite El(𝑢(l)) --> U(l)
+
+
+(* we can also declare ↑ as a destructor if we want *)
+constructor ↑ (i : Lvl) (a : Tm(U(i))) : Tm(U(Sₗ(i)))
+rewrite El(↑(A)) --> El(A)
+
+
+(* Dependent products *)
+constructor Π   ()
+                (A : Ty, B{x : Tm(A)} : Ty)
+                : Ty
+
+constructor λ   (A : Ty, B{x : Tm(A)} : Ty)
+                (t{x : Tm(A)} : Tm(B{x}))
+                : Tm(Π(A, x. B{x}))
+
+destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
+                [t : Tm(Π(A, x. B{x}))]
+                (u : Tm(A))
+                : Tm(B{u})
+
+rewrite ﹫(λ(x. t{x}), u) --> t{u}
+
+constructor π (i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
+rewrite El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
+
+rewrite ↑(π(a, x.b{x})) --> π(↑(a), x.↑(b{x}))
+
+
+(* Natural numbers *)
+constructor ℕ () () : Ty
+constructor 0 () () : Tm(ℕ)
+constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
+
+destructor ind_ℕ    ()
+                    [n : Tm(ℕ)]
+                    (P {x : Tm(ℕ)} : Ty,
+                     p0 : Tm(P{0}),
+                     ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}))
+                (* ------------ *)
+                    : Tm(P{n})
+
+rewrite ind_ℕ(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+rewrite ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
+    ps{n, ind_ℕ(n, x. P{x}, p0, n pn. ps{n, pn})}
+
+(* code in U for ℕ *)
+constructor nat (i : Lvl) () : Tm(U(i))
+rewrite El(nat) --> ℕ
+
+
+(* universe polymorphism (quantification over levels) *)
+constructor ∀ () (A {i : Lvl} : Ty) : Ty
+constructor Λ (A {i : Lvl} : Ty) (t{i : Lvl} : Tm(A{i}))
+        : Tm(∀(i. A{i}))
+destructor inst (A {i : Lvl} : Ty) [t : Tm(∀(i. A{i}))] (l : Lvl)
+        : Tm(A{l})
+rewrite inst(Λ(i. t{i}), l) --> t{l}
+
+
+(* universe polymorphic id function *)
+(* the sort is convertible to Tm(∀(i. Π(U(i), a. Π(El(a), _. El(a))))) *)
+let id_poly : Tm(∀(i. El([Tm(U(Sₗ(i)))] π(𝑢(i), a. ↑(π(a, _. a))))))
+  :=  Λ(i. λ(a. λ(x. x)))
+
+(* applying it to 0 *)
+let 0' : Tm(ℕ) := ﹫(﹫(inst(id_poly, 0ₗ), nat), 0)
+check 0' = 0

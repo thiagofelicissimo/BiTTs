@@ -1,31 +1,33 @@
 
-(* MLTT with a hierarchy of (weak) cumulative Coquand-style universes, and universe polymorphism *)
+(* MLTT with a hierarchy of cumulative Coquand-style universes, and universe polymorphism *)
 
 sort Lvl ()
 constructor l0 () () : Lvl
 constructor lS () (_ : Lvl) : Lvl
 
-sort Ty (l : Lvl) 
+sort Ty (l : Lvl)
 sort Tm (l : Lvl, A : Ty(l))
 
 
 
-(* (Weak) Coquand Universes *)
+(* Coquand Universes *)
 constructor U (l : Lvl) () : Ty(lS(l))
 constructor c (l : Lvl) (A : Ty(l)) : Tm(lS(l), U)
 destructor El (l : Lvl) [t : Tm(lS(l), U)] () : Ty(l)
 
-(* Ty(l) is a retract of Tm(U(l)) *)
+(* Ty(l) ≃ Tm(U(l)) *)
 rewrite El(c(A)) --> A
+rewrite c(El(a)) --> a
 
 
-(* Weak cumulativity *)
+(* Cumulativity *)
 constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(lS(l))
 constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(lS(l), ↑(A))
 destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(lS(l), ↑(A))] () : Tm(l, A)
 
-(* Tm(l, A) is a retract of Tm(lS(l), ↑(A)) *)
+(* Tm(l, A) ≃ Tm(lS(l), ↑(A)) *)
 rewrite unbox(box(t)) --> t
+rewrite box(unbox(t)) --> t
 
 (* Dependent products *)
 constructor Π (l : Lvl) (A : Ty(l), B {x : Tm(l, A)} : Ty(l)) : Ty(l)
@@ -36,6 +38,11 @@ destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) [t : Tm (l, Π(A,
 
 rewrite ﹫(λ(x. t{x}), u) --> t{u}
 
+(* we unfortunately cannot add the equation ↑(Π(A, x.B{x})) --> Π(↑(A),x.↑(B{x})).
+   if we orient it in the direct sense, then the pattern Tm(lS(l), ↑(A)) in the
+   declarations of box and unbox would overlap it. if we orient in the inverse
+   sense, then the pattern Tm(l, Π(A, x. B{x})) in λ and ﹫ would overlap it *)
+
 (* Natural numbers *)
 constructor ℕ () () : Ty(l0)
 constructor 0 () () : Tm(l0, ℕ)
@@ -43,9 +50,9 @@ constructor S () (_ : Tm(l0, ℕ)) : Tm(l0, ℕ)
 
 destructor ℕ_ind    ()
                     [n : Tm(l0, ℕ)]
-                    (i : Lvl, 
-                     P {x : Tm(l0, ℕ)} : Ty(i), 
-                     p0 : Tm(i, P{0}), 
+                    (i : Lvl,
+                     P {x : Tm(l0, ℕ)} : Ty(i),
+                     p0 : Tm(i, P{0}),
                      ps {n : Tm(l0, ℕ), pn : Tm(i, P{n})} : Tm(i, P{S(n)}))
                 (* ------------ *)
                     : Tm(i, P{n})
@@ -54,17 +61,6 @@ rewrite ℕ_ind(0, i, x. P{x}, p0, n pn. ps{n, pn}) --> p0
 rewrite ℕ_ind(S(n), i, x. P{x}, p0, n pn. ps{n, pn}) -->
     ps{n, ℕ_ind(n, i, x. P{x}, p0, n pn. ps{n, pn})}
 
-(* Some functions written using ℕ_ind *)
-
-let ＋ : Tm(l0, Π(ℕ, _. Π(ℕ, _. ℕ))) := λ(x. λ(y. ℕ_ind(y, l0, _. ℕ, x, _ n. S(n))))
-
-let × : Tm(l0, Π(ℕ, _. Π(ℕ, _. ℕ))) :=
-    λ(x. λ(y. ℕ_ind(y, l0, _. ℕ, 0, _ n. ﹫(﹫(＋, n), x))))
-
-let fact : Tm(l0, Π(ℕ, _. ℕ)) := λ(x. ℕ_ind(x, l0, _. ℕ, S(0), n m. ﹫(﹫(×, S(n)), m)))
-
-let fact_4 : Tm(l0, ℕ) := ﹫(fact, S(S(S(S(0)))))
-eval fact_4
 
 (* top universe *)
 sort Tyω ()
@@ -75,8 +71,9 @@ constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
 constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
 destructor  unboxω (l : Lvl, A : Ty(l)) [t : Tmω(↑ω(l, A))] () : Tm(l, A)
 
-(* Tm(l, A) is a retract of Tmω(↑ω(l, A)) *)
+(* Tm(l, A) ≃ Tmω(↑ω(l, A)) *)
 rewrite unboxω(boxω(t)) --> t
+rewrite boxω(unboxω(t)) --> t
 
 (* universe polymorphism (quantification over levels) *)
 constructor ∀ () (A {i : Lvl} : Tyω) : Tyω
@@ -85,6 +82,7 @@ constructor Λ (A {i : Lvl} : Tyω) (t{i : Lvl} : Tmω(A{i}))
 destructor inst (A {i : Lvl} : Tyω) [t : Tmω(∀(i. A{i}))] (l : Lvl)
         : Tmω(A{l})
 rewrite inst(Λ(i. t{i}), l) --> t{l}
+
 
 (* universe polymorphic id function *)
 let id_poly : Tmω(∀(i. ↑ω(lS(i), Π(U, a. Π(↑(El(a)), _. ↑(El(a)))))))
