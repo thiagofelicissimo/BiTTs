@@ -51,12 +51,13 @@ let rew_rules : rew_rules ref = ref RewTbl.empty
 
 
 (* verifies if a term pattern is a constructor pattern *)
+exception Not_a_cons_patt
 let rec is_cons_p t =
   match t with
   | Meta -> ()
   | Const(name, msubst) ->
     List.iter (fun (_, t) -> is_cons_p t) msubst
-  | Dest(name, _) -> assert false
+  | Dest(name, _) -> raise Not_a_cons_patt
 
 (* pretty printing functions *)
 

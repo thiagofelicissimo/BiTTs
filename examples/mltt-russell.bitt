@@ -1,5 +1,5 @@
 
-(* MLTT with a hierarchy of cumulative Coquand-style universes, and universe polymorphism *)
+(* MLTT with a hierarchy of cumulative Russell-style universes, and universe polymorphism *)
 
 sort Lvl ()
 constructor 0ₗ () () : Lvl
@@ -9,7 +9,7 @@ sort Ty (l : Lvl)
 sort Tm (l : Lvl, A : Ty(l))
 
 
-(* Russell Universes *)
+(* Russell-style Universes *)
 constructor U (l : Lvl) () : Ty(Sₗ(l))
 rewrite Tm(Sₗ(l), U) --> Ty(l)
 
@@ -29,7 +29,7 @@ rewrite ﹫(λ(x. t{x}), u) --> t{u}
 (* we unfortunately cannot add the equation ↑(Π(A, x.B{x})) --> Π(↑(A),x.↑(B{x})).
    if we orient it in the direct sense, then this creates an unjoinable critical
    pair with the rule Tm(Sₗ(l), ↑(A)) --> Tm(l, A)
-   if we orient in the inverse sense, then the pattern Tm(l, Π(A, x. B{x}))
+   if we orient it in the inverse sense, then the pattern Tm(l, Π(A, x. B{x}))
    in λ and ﹫ would overlap it *)
 
 (* Natural numbers *)

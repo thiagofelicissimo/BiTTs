@@ -56,6 +56,7 @@ constructor π () (i1 : Lvl, i2 : Lvl, a : Tm(U(i1)), b{_ : Tm(El(a))} : Tm(U(i2
               (maxₗ(i1, i2) / i : Lvl) : Tm(U(i))
 rewrite El(π(i1, i2, a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
+(* ensures uniqueness of codes, or "full reflection" *)
 rewrite ↑(π(i1, i2, a, x.b{x})) --> π(Sₗ(i1), Sₗ(i2), ↑(a), x.↑(b{x}))
 
 

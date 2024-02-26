@@ -50,6 +50,7 @@ rewrite ﹫(λ(x. t{x}), u) --> t{u}
 constructor π (i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
 rewrite El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
+(* ensures uniqueness of codes, or "full reflection" *)
 rewrite ↑(π(a, x.b{x})) --> π(↑(a), x.↑(b{x}))
 
 
@@ -71,7 +72,7 @@ rewrite ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
     ps{n, ind_ℕ(n, x. P{x}, p0, n pn. ps{n, pn})}
 
 (* code in U for ℕ *)
-constructor nat (i : Lvl) () : Tm(U(i))
+constructor nat () () : Tm(U(0ₗ))
 rewrite El(nat) --> ℕ
 
 

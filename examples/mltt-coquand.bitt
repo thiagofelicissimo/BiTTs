@@ -2,30 +2,26 @@
 (* MLTT with a hierarchy of cumulative Coquand-style universes, and universe polymorphism *)
 
 sort Lvl ()
-constructor l0 () () : Lvl
-constructor lS () (_ : Lvl) : Lvl
+constructor 0ₗ () () : Lvl
+constructor Sₗ () (_ : Lvl) : Lvl
 
 sort Ty (l : Lvl)
 sort Tm (l : Lvl, A : Ty(l))
 
 
 
-(* Coquand Universes *)
-constructor U (l : Lvl) () : Ty(lS(l))
-constructor c (l : Lvl) (A : Ty(l)) : Tm(lS(l), U)
-destructor El (l : Lvl) [t : Tm(lS(l), U)] () : Ty(l)
-
-(* Ty(l) ≃ Tm(U(l)) *)
+(* Coquand-style Universes: Tm(U(l)) ≃ Ty(l) *)
+constructor U (l : Lvl) () : Ty(Sₗ(l))
+constructor c (l : Lvl) (A : Ty(l)) : Tm(Sₗ(l), U)
+destructor El (l : Lvl) [t : Tm(Sₗ(l), U)] () : Ty(l)
 rewrite El(c(A)) --> A
 rewrite c(El(a)) --> a
 
 
-(* Cumulativity *)
-constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(lS(l))
-constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(lS(l), ↑(A))
-destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(lS(l), ↑(A))] () : Tm(l, A)
-
-(* Tm(l, A) ≃ Tm(lS(l), ↑(A)) *)
+(* Cumulativity: Tm(Sₗ(l), ↑(A)) ≃ Tm(l, A) *)
+constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(Sₗ(l))
+constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(Sₗ(l), ↑(A))
+destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(Sₗ(l), ↑(A))] () : Tm(l, A)
 rewrite unbox(box(t)) --> t
 rewrite box(unbox(t)) --> t
 
@@ -39,21 +35,21 @@ destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) [t : Tm (l, Π(A,
 rewrite ﹫(λ(x. t{x}), u) --> t{u}
 
 (* we unfortunately cannot add the equation ↑(Π(A, x.B{x})) --> Π(↑(A),x.↑(B{x})).
-   if we orient it in the direct sense, then the pattern Tm(lS(l), ↑(A)) in the
+   if we orient it in the direct sense, then the pattern Tm(Sₗ(l), ↑(A)) in the
    declarations of box and unbox would overlap it. if we orient in the inverse
    sense, then the pattern Tm(l, Π(A, x. B{x})) in λ and ﹫ would overlap it *)
 
 (* Natural numbers *)
-constructor ℕ () () : Ty(l0)
-constructor 0 () () : Tm(l0, ℕ)
-constructor S () (_ : Tm(l0, ℕ)) : Tm(l0, ℕ)
+constructor ℕ () () : Ty(0ₗ)
+constructor 0 () () : Tm(0ₗ, ℕ)
+constructor S () (_ : Tm(0ₗ, ℕ)) : Tm(0ₗ, ℕ)
 
 destructor ℕ_ind    ()
-                    [n : Tm(l0, ℕ)]
+                    [n : Tm(0ₗ, ℕ)]
                     (i : Lvl,
-                     P {x : Tm(l0, ℕ)} : Ty(i),
+                     P {x : Tm(0ₗ, ℕ)} : Ty(i),
                      p0 : Tm(i, P{0}),
-                     ps {n : Tm(l0, ℕ), pn : Tm(i, P{n})} : Tm(i, P{S(n)}))
+                     ps {n : Tm(0ₗ, ℕ), pn : Tm(i, P{n})} : Tm(i, P{S(n)}))
                 (* ------------ *)
                     : Tm(i, P{n})
 
@@ -66,12 +62,10 @@ rewrite ℕ_ind(S(n), i, x. P{x}, p0, n pn. ps{n, pn}) -->
 sort Tyω ()
 sort Tmω (A : Tyω)
 
-(* puts a type in Tmω *)
+(* Tmω(↑ω(l, A)) ≃ Tm(l, A) *)
 constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
 constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
 destructor  unboxω (l : Lvl, A : Ty(l)) [t : Tmω(↑ω(l, A))] () : Tm(l, A)
-
-(* Tm(l, A) ≃ Tmω(↑ω(l, A)) *)
 rewrite unboxω(boxω(t)) --> t
 rewrite boxω(unboxω(t)) --> t
 
@@ -85,9 +79,9 @@ rewrite inst(Λ(i. t{i}), l) --> t{l}
 
 
 (* universe polymorphic id function *)
-let id_poly : Tmω(∀(i. ↑ω(lS(i), Π(U, a. Π(↑(El(a)), _. ↑(El(a)))))))
+let id_poly : Tmω(∀(i. ↑ω(Sₗ(i), Π(U, a. Π(↑(El(a)), _. ↑(El(a)))))))
     :=  Λ(i. boxω(λ(a. λ(x. x))))
 
 (* applying it to 0 *)
-let 0' : Tm(l0, ℕ) := unbox(﹫(﹫(unboxω(inst(id_poly, l0)), c(ℕ)), box(0)))
+let 0' : Tm(0ₗ, ℕ) := unbox(﹫(﹫(unboxω(inst(id_poly, 0ₗ)), c(ℕ)), box(0)))
 check 0' = 0
