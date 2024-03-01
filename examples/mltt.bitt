@@ -17,11 +17,11 @@ rewrite El(𝑢) --> U
 
 (* Dependent products *)
 constructor Π   ()
-                (A : Ty, B{x : Tm(A)} : Ty) 
+                (A : Ty, B{x : Tm(A)} : Ty)
                 : Ty
 
-constructor λ   (A : Ty, B{x : Tm(A)} : Ty) 
-                (t{x : Tm(A)} : Tm(B{x})) 
+constructor λ   (A : Ty, B{x : Tm(A)} : Ty)
+                (t{x : Tm(A)} : Tm(B{x}))
                 : Tm(Π(A, x. B{x}))
 
 destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
@@ -41,15 +41,15 @@ let idU : Tm(Π(U, a. Π(El(a), _. El(a)))) := λ(a. λ(x. x))
 (* Dependent sums *)
 constructor Σ () (A : Ty, B{x : Tm(A)} : Ty) : Ty
 
-constructor mkΣ     (A : Ty, B{x : Tm(A)} : Ty) 
+constructor mkΣ     (A : Ty, B{x : Tm(A)} : Ty)
                     (t : Tm(A), u : Tm(B{t}))
                     : Tm(Σ(A, x. B{x}))
 
-destructor π₁       (A : Ty, B{x : Tm(A)} : Ty) 
+destructor π₁       (A : Ty, B{x : Tm(A)} : Ty)
                     [t : Tm(Σ(A, x. B{x}))]
                     () : Tm(A)
 
-destructor π₂       (A : Ty, B{x : Tm(A)} : Ty) 
+destructor π₂       (A : Ty, B{x : Tm(A)} : Ty)
                     [t : Tm(Σ(A, x. B{x}))]
                     () : Tm(B{π₁(t)})
 
@@ -75,8 +75,8 @@ constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
 
 destructor ind_ℕ    ()
                     [n : Tm(ℕ)]
-                    (P {x : Tm(ℕ)} : Ty, 
-                     p0 : Tm(P{0}), 
+                    (P {x : Tm(ℕ)} : Ty,
+                     p0 : Tm(P{0}),
                      ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}))
                 (* ------------ *)
                     : Tm(P{n})
@@ -102,9 +102,9 @@ let fact_4 : Tm(ℕ) := ﹫(fact, S(S(S(S(0)))))
 eval fact_4
 
 
-(* a checkable term t becomes inferable if annotated 
-   with a checkable sort T, as in [T] t  
-   redexes can be written this way *)      
+(* a checkable term t becomes inferable if annotated
+   with a checkable sort T, as in [T] t
+   redexes can be written this way *)
 let redex : Tm(ℕ) := ﹫([Tm(Π(ℕ, _. ℕ))] λ(x. x), 0)
 eval redex
 
@@ -145,12 +145,12 @@ constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Tm(Eq(A, x, y))
 
 destructor J (A : Ty, x : Tm(A)) (y : Tm(A))
              [t : Tm(Eq(A, x, y))]
-             (P{y : Tm(A), e : Tm(Eq(A, x, y))} : Ty, p : Tm(P{x, refl})) 
+             (P{y : Tm(A), e : Tm(Eq(A, x, y))} : Ty, p : Tm(P{x, refl}))
              : Tm(P{y, t})
 
 rewrite J(refl, y e. P{y, e}, p) --> p
 
-constructor eq () (a : U, x : Tm(El(a)), y : Tm(El(a))) : U 
+constructor eq () (a : Tm(U), x : Tm(El(a)), y : Tm(El(a))) : Tm(U)
 rewrite El(eq(a, x, y)) --> Eq(El(a), x, y)
 
 let sym : Tm(Π(U, a. Π(El(a), x. Π(El(a), y. Π(Eq(El(a), x, y), _. Eq(El(a), y, x))))))
@@ -176,14 +176,14 @@ destructor ind_Vec  (A : Ty) (n : Tm(ℕ))
                     [l : Tm(Vec(A, n))]
                     (P{x : Tm(ℕ), _ : Tm(Vec(A, x))} : Ty,
                      p_nil : Tm(P{0, nilV}),
-                     p_cons {n : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, n)), pl : Tm(P{n, l})} 
+                     p_cons {n : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, n)), pl : Tm(P{n, l})}
                       : Tm(P{S(n), consV(n, a, l)}))
                      (* -------------- *)
                     : Tm(P{n, l})
 
 rewrite ind_Vec(nilV, x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w}) --> p_nil
 
-rewrite ind_Vec(consV(n, a, l), x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w}) 
+rewrite ind_Vec(consV(n, a, l), x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w})
         --> p_cons{n, a, l, ind_Vec(l, x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w})}
 
 constructor vec () (a : Tm(U), n : Tm(ℕ)) : Tm(U)
@@ -197,10 +197,10 @@ let mk_Vec : Tm(Π(ℕ, n. Vec(ℕ, n)))
 
 check ﹫(mk_Vec, S(S(S(0)))) = 2∷1∷0∷nil
 
-let append : Tm(Π(U, a. 
+let append : Tm(Π(U, a.
                 Π(ℕ, n1. Π(Vec(El(a), n1), l1.
                 Π(ℕ, n2. Π(Vec(El(a), n2), l2. Vec(El(a), ﹫(﹫(＋, n2), n1))))))))
-:= λ(a. λ(n1. λ(l1. λ(n2. λ(l2. 
+:= λ(a. λ(n1. λ(l1. λ(n2. λ(l2.
     ind_Vec(l1, m _. Vec(El(a), ﹫(﹫(＋, n2), m)), l2, n a l pl. consV(﹫(﹫(＋, n2), n), a, pl)))))))
 
 let 1∷0∷nil : Tm(Vec(ℕ, S(S(0)))) := consV(S(0), S(0), consV(0, 0, nilV))
@@ -209,7 +209,7 @@ check 2∷1∷0∷nil = ﹫(﹫(﹫(﹫(﹫(append, nat), S(0)), consV(0, S(S(0)
 
 
 (* W Types *)
-constructor W () (A : Ty, B{x : Tm(A)} : Ty) : Ty 
+constructor W () (A : Ty, B{x : Tm(A)} : Ty) : Ty
 constructor sup (A : Ty, B{x : Tm(A)} : Ty)
                 (a : Tm(A), f : Tm(Π(B{a}, _. W(A, x.B{x}))))
                 : Tm(W(A, x.B{x}))
@@ -217,12 +217,12 @@ constructor sup (A : Ty, B{x : Tm(A)} : Ty)
 destructor ind_W    (A : Ty, B{x : Tm(A)} : Ty)
                     [t : Tm(W(A, x.B{x}))]
                     (P{x : Tm(W(A, x.B{x}))} : Ty,
-                     p{x : Tm(A), 
-                       y : Tm(Π(B{x}, _. W(A, x.B{x}))), 
+                     p{x : Tm(A),
+                       y : Tm(Π(B{x}, _. W(A, x.B{x}))),
                        z : Tm(Π(B{x}, x'. P{﹫(y, x')}))} : Tm(P{sup(x, y)}) )
                        : Tm(P{t})
 
-rewrite ind_W(sup(a, f), x. P{x}, x y z. p{x, y, z}) --> 
+rewrite ind_W(sup(a, f), x. P{x}, x y z. p{x, y, z}) -->
         p{a, f, λ(x. ind_W(﹫(f, x), x. P{x}, x y z. p{x, y, z}))}
 
 constructor w () (a : Tm(U), b{x : Tm(El(a))} : Tm(U)) : Tm(U)
@@ -230,28 +230,28 @@ rewrite El(w(a, x.b{x})) --> W(El(a), x.El(b{x}))
 
 (* auxiliary types to define nat with W *)
 
-constructor ⊥ () () : Ty 
+constructor ⊥ () () : Ty
 destructor ind_⊥ () [x : Tm(⊥)] (P : Ty) : Tm(P)
 
 constructor ⊥c () () : Tm(U)
 rewrite El(⊥c) --> ⊥
 
-constructor ⊤ () () : Ty 
+constructor ⊤ () () : Ty
 constructor I () () : Tm(⊤)
 
 constructor ⊤c () () : Tm(U)
 rewrite El(⊤c) --> ⊤
 
 
-constructor Bool () () : Ty 
+constructor Bool () () : Ty
 constructor tt () () : Tm(Bool)
 constructor ff () () : Tm(Bool)
 
 destructor if () [x : Tm(Bool)]
-                 (P{x : Tm(Bool)} : Ty, 
-                  a : Tm(P{tt}), 
+                 (P{x : Tm(Bool)} : Ty,
+                  a : Tm(P{tt}),
                   b : Tm(P{ff})) : Tm(P{x})
-rewrite if(tt, x.P{x}, a, b) --> a 
+rewrite if(tt, x.P{x}, a, b) --> a
 rewrite if(ff, x.P{x}, a, b) --> b
 
 constructor bool () () : Tm(U)
@@ -262,13 +262,13 @@ let Nat : Ty := W(Bool, x. El(if(x, _. U, ⊤c, ⊥c)))
 let zero : Tm(Nat) := sup(ff, λ(x. ind_⊥(x, Nat)))
 let succ : Tm(Π(Nat, _. Nat)) := λ(x. sup(tt, λ(_. x)))
 
-let plus : Tm(Π(Nat, _. Π(Nat, _. Nat))) 
-  := λ(x. λ(y. 
-    ind_W(x, _. Nat, b f h. 
-     ﹫(if(b, 
-           x. Π(Π(El(if(x, _. U, ⊤c, ⊥c)), _. Nat), _. Nat), 
-           λ(h. ﹫(succ, ﹫(h, I))), 
-           λ(_. y)), 
+let plus : Tm(Π(Nat, _. Π(Nat, _. Nat)))
+  := λ(x. λ(y.
+    ind_W(x, _. Nat, b f h.
+     ﹫(if(b,
+           x. Π(Π(El(if(x, _. U, ⊤c, ⊥c)), _. Nat), _. Nat),
+           λ(h. ﹫(succ, ﹫(h, I))),
+           λ(_. y)),
       h))))
 
 let 2_Nat : Tm(Nat) := ﹫(succ, ﹫(succ, zero))
