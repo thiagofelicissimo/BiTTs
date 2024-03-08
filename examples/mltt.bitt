@@ -261,19 +261,19 @@ rewrite El(bool) --> Bool
 (* different definition of Nat, using W types *)
 let Nat : Ty := W(Bool, x. El(if(x, _. U, ⊤c, ⊥c)))
 let zero : Tm(Nat) := sup(ff, λ(x. ind_⊥(x, Nat)))
-let succ : Tm(Π(Nat, _. Nat)) := λ(x. sup(tt, λ(_. x)))
+let succ (x : Tm(Nat)) : Tm(Nat) := sup(tt, λ(_. x))
 
 let plus : Tm(Π(Nat, _. Π(Nat, _. Nat)))
   := λ(x. λ(y.
     ind_W(x, _. Nat, b f h.
      ﹫(if(b,
            x. Π(Π(El(if(x, _. U, ⊤c, ⊥c)), _. Nat), _. Nat),
-           λ(h. ﹫(succ, ﹫(h, I))),
+           λ(h. succ(﹫(h, I))),
            λ(_. y)),
       h))))
 
-let 2_Nat : Tm(Nat) := ﹫(succ, ﹫(succ, zero))
-let 3_Nat : Tm(Nat) := ﹫(succ, 2_Nat)
-let 5_Nat : Tm(Nat) := ﹫(succ, ﹫(succ, 3_Nat))
+let 2_Nat : Tm(Nat) := succ(succ(zero))
+let 3_Nat : Tm(Nat) := succ(2_Nat)
+let 5_Nat : Tm(Nat) := succ(succ(3_Nat))
 
 check 5_Nat = ﹫(﹫(plus, 2_Nat), 3_Nat)
