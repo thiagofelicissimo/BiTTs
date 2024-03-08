@@ -23,12 +23,12 @@ destructor El (l : Lvl) [A : Tm(U(l))] () : Ty
    syntax and we cannot write the rule  El(𝑢) --> U(?) because we don't know
    what to put in the place of ? *)
 constructor 𝑢 () (l : Lvl) (Sₗ(l) / l : Lvl) : Tm(U(l))
-rewrite El(𝑢(l)) --> U(l)
+equation El(𝑢(l)) --> U(l)
 
 
 (* we can also declare ↑ as a destructor if we want *)
 constructor ↑ (i : Lvl) (a : Tm(U(i))) : Tm(U(Sₗ(i)))
-rewrite El(↑(A)) --> El(A)
+equation El(↑(A)) --> El(A)
 
 
 (* Dependent products *)
@@ -45,10 +45,10 @@ destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
                 (u : Tm(A))
                 : Tm(B{u})
 
-rewrite ﹫(λ(x. t{x}), u) --> t{u}
+equation ﹫(λ(x. t{x}), u) --> t{u}
 
 constructor π (i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
-rewrite El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
+equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
 (* Natural numbers *)
 constructor ℕ () () : Ty
@@ -63,13 +63,13 @@ destructor ind_ℕ    ()
                 (* ------------ *)
                     : Tm(P{n})
 
-rewrite ind_ℕ(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
-rewrite ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
+equation ind_ℕ(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+equation ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
     ps{n, ind_ℕ(n, x. P{x}, p0, n pn. ps{n, pn})}
 
 (* code in U for ℕ *)
 constructor nat () () : Tm(U(0ₗ))
-rewrite El(nat) --> ℕ
+equation El(nat) --> ℕ
 
 
 (* universe polymorphism (quantification over levels) *)
@@ -78,7 +78,7 @@ constructor Λ (A {i : Lvl} : Ty) (t{i : Lvl} : Tm(A{i}))
         : Tm(∀(i. A{i}))
 destructor inst (A {i : Lvl} : Ty) [t : Tm(∀(i. A{i}))] (l : Lvl)
         : Tm(A{l})
-rewrite inst(Λ(i. t{i}), l) --> t{l}
+equation inst(Λ(i. t{i}), l) --> t{l}
 
 
 (* universe polymorphic id function *)
@@ -88,4 +88,4 @@ let id_poly : Tm(∀(i. El([Tm(U(Sₗ(i)))] π(𝑢(i), a. ↑(π(a, _. a))))))
 
 (* applying it to 0 *)
 let 0' : Tm(ℕ) := ﹫(﹫(inst(id_poly, 0ₗ), nat), 0)
-check 0' = 0
+assert 0' = 0

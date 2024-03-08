@@ -4,7 +4,7 @@
 
 %}
 %token EOF
-%token CONS DEST SORT REW LET EVAL CHECK
+%token CONS DEST SORT REW LET EVAL ASSERT
 %token LPAR RPAR LBRACK RBRACK LSQB RSQB
 %token COLON DOT COMMA REDUCES DEF EQUAL SLASH
 %token <string> IDENT
@@ -70,7 +70,7 @@ entry:
     { Let(id, mctx, ty, tm) }
   | EVAL tm=term
     { Eval(tm) }
-  | CHECK t=term EQUAL u=term { Eq(t, u) }
+  | ASSERT t=term EQUAL u=term { Eq(t, u) }
 
 program:
   | l=list(entry) EOF { l }

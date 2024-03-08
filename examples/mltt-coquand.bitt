@@ -14,14 +14,14 @@ sort Tm (l : Lvl, A : Ty(l))
 constructor U (l : Lvl) () : Ty(Sₗ(l))
 constructor c (l : Lvl) (A : Ty(l)) : Tm(Sₗ(l), U)
 destructor El (l : Lvl) [t : Tm(Sₗ(l), U)] () : Ty(l)
-rewrite El(c(A)) --> A
+equation El(c(A)) --> A
 
 
 (* Cumulativity: Tm(Sₗ(l), ↑(A)) ≃ Tm(l, A) *)
 constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(Sₗ(l))
 constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(Sₗ(l), ↑(A))
 destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(Sₗ(l), ↑(A))] () : Tm(l, A)
-rewrite unbox(box(t)) --> t
+equation unbox(box(t)) --> t
 
 (* Dependent products *)
 constructor Π (l : Lvl) (A : Ty(l), B {x : Tm(l, A)} : Ty(l)) : Ty(l)
@@ -30,7 +30,7 @@ constructor λ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) (t{x : Tm(l, A)} 
 destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) [t : Tm (l, Π(A, x. B{x}))] (u : Tm(l, A))
         : Tm(l, B{u})
 
-rewrite ﹫(λ(x. t{x}), u) --> t{u}
+equation ﹫(λ(x. t{x}), u) --> t{u}
 
 (* we unfortunately cannot add the equation ↑(Π(A, x.B{x})) --> Π(↑(A),x.↑(B{x})).
    if we orient it in the direct sense, then the pattern Tm(Sₗ(l), ↑(A)) in the
@@ -51,8 +51,8 @@ destructor ℕ_ind    ()
                 (* ------------ *)
                     : Tm(i, P{n})
 
-rewrite ℕ_ind(0, i, x. P{x}, p0, n pn. ps{n, pn}) --> p0
-rewrite ℕ_ind(S(n), i, x. P{x}, p0, n pn. ps{n, pn}) -->
+equation ℕ_ind(0, i, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+equation ℕ_ind(S(n), i, x. P{x}, p0, n pn. ps{n, pn}) -->
     ps{n, ℕ_ind(n, i, x. P{x}, p0, n pn. ps{n, pn})}
 
 
@@ -64,7 +64,7 @@ sort Tmω (A : Tyω)
 constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
 constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
 destructor  unboxω (l : Lvl, A : Ty(l)) [t : Tmω(↑ω(l, A))] () : Tm(l, A)
-rewrite unboxω(boxω(t)) --> t
+equation unboxω(boxω(t)) --> t
 
 (* universe polymorphism (quantification over levels) *)
 constructor ∀ () (A {i : Lvl} : Tyω) : Tyω
@@ -72,7 +72,7 @@ constructor Λ (A {i : Lvl} : Tyω) (t{i : Lvl} : Tmω(A{i}))
         : Tmω(∀(i. A{i}))
 destructor inst (A {i : Lvl} : Tyω) [t : Tmω(∀(i. A{i}))] (l : Lvl)
         : Tmω(A{l})
-rewrite inst(Λ(i. t{i}), l) --> t{l}
+equation inst(Λ(i. t{i}), l) --> t{l}
 
 
 (* universe polymorphic id function *)
@@ -81,4 +81,4 @@ let id_poly : Tmω(∀(i. ↑ω(Sₗ(i), Π(U, a. Π(↑(El(a)), _. ↑(El(a))))
 
 (* applying it to 0 *)
 let 0' : Tm(0ₗ, ℕ) := unbox(﹫(﹫(unboxω(inst(id_poly, 0ₗ)), c(ℕ)), box(0)))
-check 0' = 0
+assert 0' = 0

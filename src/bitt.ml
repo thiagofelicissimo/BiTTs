@@ -11,9 +11,11 @@ let colored n s =
   "\027[3" ^ string_of_int n ^ "m" ^ s ^ "\027[m"
 
 let yellow = colored 3
-let blue = colored 6
+let command = colored 6
 let green = colored 2
 let red = colored 1
+
+let darkblue = colored 4
 
 let syntax_error () = Format.printf "%s: " (red "Syntax error")
 
@@ -42,7 +44,9 @@ let () =
           (* typechecking *)
           Ty.check_mctx mctx;
           (* adding to the theory *)
-          T.schem_rules := T.RuleTbl.add name (T.Sort mctx) !T.schem_rules
+          T.schem_rules := T.RuleTbl.add name (T.Sort mctx) !T.schem_rules;
+
+          Format.printf "[%s %s] %s@." (darkblue "sort") name (green "OK")
 
         | C.Cons(name, mctx_pars, mctx_args, imctx, ty) ->
           (* scoping *)
@@ -63,8 +67,9 @@ let () =
 
           (* adding to the theory *)
           T.schem_rules :=
-            T.RuleTbl.add name (T.Const(List.length inst_msubst, mctx_args', inst_msubst, ty_p)) !T.schem_rules
+            T.RuleTbl.add name (T.Const(List.length inst_msubst, mctx_args', inst_msubst, ty_p)) !T.schem_rules;
 
+          Format.printf "[%s %s] %s@." (darkblue "constructor") name (green "OK")
         | C.Dest(name, mctx_pars_ixs, name_arg, ty_arg, mctx_args, ty) ->
 
           (* scoping *)
@@ -74,7 +79,7 @@ let () =
 
           (* typechecking*)
           Ty.check_mctx full_mctx;
-          (* Ty.check_sort full_mctx [] [] ty'; *)
+          Ty.check_sort full_mctx [] [] ty';
 
           (* scoping of princip arg as a pattern *)
           let ty_arg_p, ty_arg_mscope = C.scope_p_tm ty_arg in
@@ -85,7 +90,9 @@ let () =
 
           (* adding to the theory *)
           let mctx_args', _ = split_at (List.length mctx_args) full_mctx in
-          T.schem_rules := T.RuleTbl.add name (T.Dest(ty_arg_p, mctx_args', ty')) !T.schem_rules
+          T.schem_rules := T.RuleTbl.add name (T.Dest(ty_arg_p, mctx_args', ty')) !T.schem_rules;
+
+          Format.printf "[%s %s] %s@." (darkblue "destructor") name (green "OK")
 
         | C.Rew(lhs, rhs) ->
             begin match lhs with
@@ -98,12 +105,14 @@ let () =
               T.rew_rules :=
                 T.RewTbl.add name ((p_msubst, rhs') :: rews) !T.rew_rules end
             | _ -> assert false
-            end
+            end;
+          Format.printf "[%s] %s@." (darkblue "equation") (yellow "type-checker for rewrite rules not yet implemented")
+
         | Eval(tm) ->
           let tm = C.scope_tm tm [] [] in
           let vtm = E.eval_tm tm 0 [] [] in
           let tm' = E.read_back_tm 0 vtm in
-          Format.printf "[%s] %a -->* %a@." (blue "eval") T.pp_term tm T.pp_term tm'
+          Format.printf "[%s %a] %a@." (darkblue "evaluate") T.pp_term tm T.pp_term tm'
 
         | Let(name, mctx, ty, tm) ->
 
@@ -121,30 +130,22 @@ let () =
           (* adding to the scope of top-level defs *)
           T.defs := T.DefTbl.add name {T.tm = tm'; mctx = mctx'; ty = ty'} !T.defs;
 
-          Format.printf "%s %s@." (green "checked definition") name
-          (*
-          let tm = C.scope_tm tm [] [] in
-          let ty = C.scope_tm ty [] [] in
-          Ty.check_sort [] [] [] ty;
-          let v_ty = E.eval_tm ty 0 [] [] in
-          Ty.check [] [] [] tm v_ty;
-          let v_tm = E.eval_tm tm 0 [] [] in
-          V.defs := V.DefTbl.add name {V.rhs = v_tm; ty = v_ty} !V.defs;
-          Format.printf "%s %s@." (green "checked definition") name *)
+          Format.printf "[%s %s] %s@." (command "let") name (green "OK")
 
         | Eq(t, u) ->
           let t' = C.scope_tm t [] [] in
           let u' = C.scope_tm u [] [] in
           E.equal_tm (E.eval_tm t' 0 [] []) (E.eval_tm u' 0 [] []) 0;
-          Format.printf "[%s] %a = %a@." (blue "check") T.pp_term t' T.pp_term u'
+          Format.printf "[%s %a = %a] %s@." (command "assert") T.pp_term t' T.pp_term u' (green "OK")
       end prog
     end !input_files
   with
-  | L.SyntaxError(b, e) ->
+  | (L.SyntaxError(b, e) as e') ->
     let l = b.Lexing.pos_lnum in
     let fc = b.pos_cnum - b.pos_bol + 1 in
     let lc = e.Lexing.pos_cnum - b.pos_bol + 1 in
     syntax_error ();
-    Format.printf "line %d, characters %d-%d@." l fc lc
+    Format.printf "line %d, characters %d-%d@." l fc lc;
+    raise e'
   | e ->
     report_error (); raise e

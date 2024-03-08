@@ -11,17 +11,17 @@ sort Prf (t : Tm(prop))
 constructor → () (A : Ty, B : Ty) : Ty
 constructor λ (A : Ty, B : Ty) (t{x : Tm(A)} : Tm(B)) : Tm(→(A, B))
 destructor ﹫ (A : Ty, B : Ty) [t : Tm(→(A, B))] (u : Tm(A)) : Tm(B)
-rewrite ﹫(λ(x. t{x}), u) --> t{u}
+equation ﹫(λ(x. t{x}), u) --> t{u}
 
 constructor  ∀ () (A : Ty, P{x : Tm(A)} : Tm(prop)) : Tm(prop)
 constructor in∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) (t{x : Tm(A)} : Prf(P{x})) : Prf(∀(A, x. P{x}))
 destructor  el∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) [t : Prf(∀(A, x. P{x}))] (u : Tm(A)) : Prf(P{u})
-rewrite el∀(in∀(x. p{x}), t) --> p{t}
+equation el∀(in∀(x. p{x}), t) --> p{t}
 
 constructor ⇒ () (P : Tm(prop), Q : Tm(prop)) : Tm(prop)
 constructor in⇒ (P : Tm(prop), Q : Tm(prop)) (q{p : Prf(P)} : Prf(Q)) : Prf(⇒(P, Q))
 destructor  el⇒ (P : Tm(prop), Q : Tm(prop)) [pq : Prf(⇒(P, Q))] (p : Prf(P)) : Prf(Q)
-rewrite el⇒(in⇒(x. q{x}), p) --> q{p}
+equation el⇒(in⇒(x. q{x}), p) --> q{p}
 
 let P⇒P : Prf(∀(prop, P. ⇒(P, P)))
     := in∀(P. in⇒(p. p))

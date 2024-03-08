@@ -8,13 +8,13 @@ exception Lexing_error
 let keyword_or_ident =
   let h = Hashtbl.create 17 in
   List.iter (fun (s, k) -> Hashtbl.add h s k)
-    [   "rewrite", REW;
+    [   "equation", REW;
         "constructor", CONS;
         "destructor", DEST;
         "sort", SORT;
         "let", LET;
-        "check", CHECK;
-        "eval", EVAL
+        "assert", ASSERT;
+        "evaluate", EVAL
     ] ;
   fun s ->
     try  Hashtbl.find h s
