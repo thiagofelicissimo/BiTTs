@@ -15,7 +15,6 @@ constructor U (l : Lvl) () : Ty(Sₗ(l))
 constructor c (l : Lvl) (A : Ty(l)) : Tm(Sₗ(l), U)
 destructor El (l : Lvl) [t : Tm(Sₗ(l), U)] () : Ty(l)
 rewrite El(c(A)) --> A
-rewrite c(El(a)) --> a
 
 
 (* Cumulativity: Tm(Sₗ(l), ↑(A)) ≃ Tm(l, A) *)
@@ -23,7 +22,6 @@ constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(Sₗ(l))
 constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(Sₗ(l), ↑(A))
 destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(Sₗ(l), ↑(A))] () : Tm(l, A)
 rewrite unbox(box(t)) --> t
-rewrite box(unbox(t)) --> t
 
 (* Dependent products *)
 constructor Π (l : Lvl) (A : Ty(l), B {x : Tm(l, A)} : Ty(l)) : Ty(l)
@@ -67,7 +65,6 @@ constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
 constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
 destructor  unboxω (l : Lvl, A : Ty(l)) [t : Tmω(↑ω(l, A))] () : Tm(l, A)
 rewrite unboxω(boxω(t)) --> t
-rewrite boxω(unboxω(t)) --> t
 
 (* universe polymorphism (quantification over levels) *)
 constructor ∀ () (A {i : Lvl} : Tyω) : Tyω

@@ -11,8 +11,6 @@ let rec match_tm (p_tm : p_tm) (v_tm : v_tm) : v_msubst =
   match p_tm, v_tm with
   | Meta, _ -> [Value(v_tm)]
   | Const(c, p_msubst), Const(c', msubst) when c = c' -> match_msubst p_msubst msubst
-  | Dest(d, p_msubst), Dest(d', t, msubst) when d = d' ->
-    match_msubst p_msubst ([Value(t)] @ msubst)
   | _ -> raise Match_failure
 
 and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
@@ -43,6 +41,7 @@ let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
       eval_tm t' v_msubst' ((eval_subst subst v_msubst v_subst) @ v_subst')
     end
   | Def(d) -> (DefTbl.find d !defs).rhs
+  | Const(c, msubst) -> Const(c, eval_msubst msubst v_msubst v_subst)
   | Dest(d, u, msubst') ->
     begin
       let v_u = eval_tm u v_msubst v_subst in
@@ -58,18 +57,6 @@ let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
         Dest(d, v_u, v_msubst')
       with Matched(result, r) -> eval_tm r result []
     end
-(*| Const(c, msubst) -> Const(c, eval_msubst msubst v_msubst v_subst)*)
-  | Const(c, msubst') ->
-    let args = eval_msubst msubst' v_msubst v_subst in
-    let try_match (p_msubst, r) =
-      try
-        let result = match_msubst p_msubst args in
-        raise (Matched(result,r))
-      with Match_failure -> () in
-    try
-      List.iter try_match (try RewTbl.find c !rew_rules with _ -> []);
-      Const(c, args)
-    with Matched(result, r) -> eval_tm r result []
 
 
 and eval_subst (subst : subst) (v_msubst : v_msubst) (v_subst : v_subst) : v_subst =

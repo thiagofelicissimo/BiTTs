@@ -45,7 +45,6 @@ let () =
           let inst_msubst = C.scope_msubst (C.msubst_of_imctx imctx) mscope_pars_args [] in
           let mctx_ixs', mscope_pars_ixs = C.scope_mctx (C.mctx_of_imctx imctx) mscope_pars in
           let ty_p, ty_scope = C.scope_p_tm ty in
-          T.is_cons_p ty_p;
           assert (mscope_pars_ixs = ty_scope);
           T.schem_rules :=
             T.RuleTbl.add name (T.Const(List.length inst_msubst, mctx_args', inst_msubst, ty_p)) !T.schem_rules
@@ -54,7 +53,6 @@ let () =
           let mctx_pars', mscope_pars = C.scope_mctx mctx_pars [] in
           let mctx_ixs', mscope_pars_ixs = C.scope_mctx mctx_ixs mscope_pars in
           let ty_arg_p, arg_mscope = C.scope_p_tm ty_arg in
-          T.is_cons_p ty_arg_p;
           assert (mscope_pars_ixs = arg_mscope);
           let mctx_args', mscope_all = C.scope_mctx mctx_args (name_arg :: mscope_pars_ixs) in
           let ty' = C.scope_tm ty mscope_all [] in
@@ -63,7 +61,8 @@ let () =
         | C.Rew(lhs, rhs) ->
             begin match lhs with
             | Symb(name, msubst) -> begin
-              (* if msubst = [] then assert false; *)
+              (match T.RuleTbl.find name !T.schem_rules with | Dest(_) -> () | _ -> assert false);
+              if msubst = [] then assert false;
               let p_msubst, mscope = C.scope_p_msubst msubst in
               let rhs' = C.scope_tm rhs mscope [] in
               let rews = try T.RewTbl.find name !T.rew_rules with _ -> [] in

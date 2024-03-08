@@ -50,10 +50,6 @@ rewrite ﹫(λ(x. t{x}), u) --> t{u}
 constructor π (i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
 rewrite El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
-(* ensures uniqueness of codes, or "full reflection" *)
-rewrite ↑(π(a, x.b{x})) --> π(↑(a), x.↑(b{x}))
-
-
 (* Natural numbers *)
 constructor ℕ () () : Ty
 constructor 0 () () : Tm(ℕ)

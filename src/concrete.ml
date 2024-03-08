@@ -115,13 +115,13 @@ let rec scope_p_tm (t : tm) : T.p_tm * string list =
   | NotApplied(name) ->
     begin match T.RuleTbl.find_opt name !T.schem_rules with
     | Some Const(_) | Some Sort(_) -> T.Const(name, []), []
-    | Some Dest(_) -> raise Dest_not_applied
+    | Some Dest(_) -> raise Not_a_patt
     | None -> Meta, [name] end
   | Symb(name, msubst) ->
-    let msubst_p, mscope = scope_p_msubst msubst in
     begin match T.RuleTbl.find_opt name !T.schem_rules with
-    | Some Const(_) | Some Sort(_) -> T.Const(name, msubst_p), mscope
-    | Some Dest(_) -> T.Dest(name, msubst_p), mscope
+    | Some Const(_) | Some Sort(_) ->
+      let msubst_p, mscope = scope_p_msubst msubst in
+      T.Const(name, msubst_p), mscope
     | _ -> raise Not_a_patt end
   | _ -> raise Not_a_patt
 

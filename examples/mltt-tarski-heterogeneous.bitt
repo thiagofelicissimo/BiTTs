@@ -10,7 +10,7 @@ sort Tm (A : Ty)
 sort Lvl ()
 constructor 0ₗ () () : Lvl
 constructor Sₗ () (_ : Lvl) : Lvl
-constructor maxₗ () (i : Lvl, j : Lvl) : Lvl
+destructor maxₗ () [i : Lvl] (j : Lvl) : Lvl
 
 rewrite maxₗ(0ₗ, j) --> j
 rewrite maxₗ(i, 0ₗ) --> i
@@ -56,9 +56,6 @@ constructor π () (i1 : Lvl, i2 : Lvl, a : Tm(U(i1)), b{_ : Tm(El(a))} : Tm(U(i2
               (maxₗ(i1, i2) / i : Lvl) : Tm(U(i))
 rewrite El(π(i1, i2, a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
-(* ensures uniqueness of codes, or "full reflection" *)
-rewrite ↑(π(i1, i2, a, x.b{x})) --> π(Sₗ(i1), Sₗ(i2), ↑(a), x.↑(b{x}))
-
 
 (* Natural numbers *)
 constructor ℕ () () : Ty
@@ -95,7 +92,7 @@ rewrite inst(Λ(i. t{i}), l) --> t{l}
 (* universe polymorphic id function *)
 (* note that the sort cannot be simplified, because
    maxₗ(Sₗ(i), maxₗ(i,i)) = Sₗ(i) does not hold on open terms *)
-let id_poly : Tm(∀(i. El([Tm(U(maxₗ(Sₗ(i), maxₗ(i,i))))]
+let id_poly : Tm(∀(i. El([Tm(U(maxₗ([Lvl] Sₗ(i), maxₗ(i,i))))]
                       π(Sₗ(i), maxₗ(i,i), 𝑢(i), a. π(i, i, a, _. a)))))
   :=  Λ(i. λ(a. λ(x. x)))
 

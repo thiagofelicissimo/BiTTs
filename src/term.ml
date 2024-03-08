@@ -23,7 +23,6 @@ type mctx = (ctx * tm) list
 type p_tm =
   | Meta
   | Const of string * p_msubst
-  | Dest of string * p_msubst
 and p_msubst = (int * p_tm) list
 
 (* schematic rules *)
@@ -48,16 +47,6 @@ type rew_rule = p_msubst * tm
 module RewTbl = Map.Make(String)
 type rew_rules = (rew_rule list) RewTbl.t
 let rew_rules : rew_rules ref = ref RewTbl.empty
-
-
-(* verifies if a term pattern is a constructor pattern *)
-exception Not_a_cons_patt
-let rec is_cons_p t =
-  match t with
-  | Meta -> ()
-  | Const(name, msubst) ->
-    List.iter (fun (_, t) -> is_cons_p t) msubst
-  | Dest(name, _) -> raise Not_a_cons_patt
 
 (* pretty printing functions *)
 
@@ -100,9 +89,6 @@ let rec pp_p_term fmt t =
   | Meta -> fprintf fmt "?"
   | Const(name, []) -> fprintf fmt "%s" name
   | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_p_msubst msubst
-  | Dest(name, []) -> assert false
-  | Dest(name, msubst) ->
-    fprintf fmt "%s(%a)" name pp_p_msubst msubst
 
 and pp_p_msubst fmt msubst =
   let pp_arg fmt (n, t) =
