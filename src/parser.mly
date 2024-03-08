@@ -65,7 +65,9 @@ entry:
     { Dest(id, mctx1, id_arg, ty_arg, mctx2, ty) }
   | REW lhs=term REDUCES rhs=term { Rew(lhs, rhs) }
   | LET id=IDENT COLON ty=term DEF tm=term
-    { Let(id, ty, tm) }
+    { Let(id, [], ty, tm) }
+  | LET id=IDENT mctx=mctx COLON ty=term DEF tm=term
+    { Let(id, mctx, ty, tm) }
   | EVAL tm=term
     { Eval(tm) }
   | CHECK t=term EQUAL u=term { Eq(t, u) }

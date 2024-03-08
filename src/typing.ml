@@ -60,7 +60,10 @@ let rec infer (mctx : mctx) (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =
     let v_msubst =
       check_msubst mctx v_ctx v_subst (Value(v_u) :: pars_ixs) msubst args_mctx in
     eval_tm sort 0 v_msubst []
-  | Def(d) -> (DefTbl.find d !defs).ty
+  | Def(d, msubst) ->
+    let v_msubst =
+      check_msubst mctx v_ctx v_subst [] msubst (DefTbl.find d !defs).mctx in
+    eval_tm (DefTbl.find d !defs).ty 0 v_msubst []
   | Meta(n, subst) ->
     if typing_mgs then Format.printf  "the metacontext is:@.%a @. but we are trying to access %d@." pp_mctx mctx n;
     let ctx, ty = List.nth mctx n in

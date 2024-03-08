@@ -20,7 +20,7 @@ type mctx = (string * ctx * tm) list
 type imctx = (string * tm * tm) list
 
 type entry =
-  | Let of string * tm * tm
+  | Let of string * mctx * tm * tm
   | Sort of string * mctx
   | Cons of string * mctx * mctx * imctx * tm
     (* c (Xi_p; Xi_c; Vi/Xi_i) : T *)
@@ -62,8 +62,8 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
       begin match T.RuleTbl.find_opt name !T.schem_rules with
       | Some _ -> T.Const(name, [])
       | None ->
-        if (V.DefTbl.find_opt name !V.defs) <> None
-        then T.Def(name)
+        if (T.DefTbl.find_opt name !T.defs) <> None
+        then T.Def(name, [])
         else raise Name_not_in_scope end end
   | Meta(name, subst) ->
     begin match get_db name mscope with
@@ -71,9 +71,12 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
     | Some i -> T.Meta(i, scope_subst subst mscope scope) end
   | Symb(name, msubst) ->
     begin match T.RuleTbl.find_opt name !T.schem_rules with
-    | None -> raise Name_not_in_scope
     | Some(Const(_)) | Some(Sort(_)) -> T.Const(name, scope_msubst msubst mscope scope)
     | Some(Dest(_)) -> T.Dest(name, scope_msubst msubst mscope scope)
+    | None ->
+      if (T.DefTbl.find_opt name !T.defs) <> None
+        then T.Def(name, scope_msubst msubst mscope scope)
+        else raise Name_not_in_scope
   end
 
 and scope_subst (subst : subst) (mscope : string list) (scope : string list) : T.subst =
@@ -200,6 +203,7 @@ let pp_entry fmt entry =
     name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty
   | Rew(lhs, rhs) ->
     fprintf fmt "rewrite %a --> %a@." pp_term lhs pp_term rhs
-  | Let(name, ty, t) -> fprintf fmt "let %s : %a := %a@." name pp_term ty pp_term t
+  | Let(name, mctx, ty, t) ->
+    fprintf fmt "let %s (%a) : %a := %a@." name pp_mctx mctx pp_term ty pp_term t
   | Eval(t) -> fprintf fmt "eval %a@." pp_term t
   | Eq(t, u) -> fprintf fmt "check %a = %a@." pp_term t pp_term u

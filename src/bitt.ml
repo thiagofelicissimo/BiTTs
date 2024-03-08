@@ -105,7 +105,24 @@ let () =
           let tm' = E.read_back_tm 0 vtm in
           Format.printf "[%s] %a -->* %a@." (blue "eval") T.pp_term tm T.pp_term tm'
 
-        | Let(name, ty, tm) ->
+        | Let(name, mctx, ty, tm) ->
+
+          (* scoping *)
+          let mctx', mscope = C.scope_mctx mctx [] in
+          let ty' = C.scope_tm ty mscope [] in
+          let tm' = C.scope_tm tm mscope [] in
+
+          (* typing *)
+          Ty.check_mctx mctx';
+          Ty.check_sort mctx' [] [] ty';
+          let v_ty = E.eval_tm ty' 0 [] [] in
+          Ty.check mctx' [] [] tm' v_ty;
+
+          (* adding to the scope of top-level defs *)
+          T.defs := T.DefTbl.add name {T.tm = tm'; mctx = mctx'; ty = ty'} !T.defs;
+
+          Format.printf "%s %s@." (green "checked definition") name
+          (*
           let tm = C.scope_tm tm [] [] in
           let ty = C.scope_tm ty [] [] in
           Ty.check_sort [] [] [] ty;
@@ -113,7 +130,7 @@ let () =
           Ty.check [] [] [] tm v_ty;
           let v_tm = E.eval_tm tm 0 [] [] in
           V.defs := V.DefTbl.add name {V.rhs = v_tm; ty = v_ty} !V.defs;
-          Format.printf "%s %s@." (green "checked definition") name
+          Format.printf "%s %s@." (green "checked definition") name *)
 
         | Eq(t, u) ->
           let t' = C.scope_tm t [] [] in

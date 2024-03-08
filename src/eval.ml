@@ -42,7 +42,10 @@ let rec eval_tm (t : tm) (meta_offset : int) (v_msubst : v_msubst) (v_subst : v_
     | None ->
        Meta(n + meta_offset, eval_subst subst meta_offset v_msubst v_subst)
     end
-  | Def(d) -> (DefTbl.find d !defs).rhs
+  | Def(d, msubst) ->
+    let body = (DefTbl.find d !defs).tm in
+    let v_msubst' = eval_msubst msubst meta_offset v_msubst v_subst in
+    eval_tm body 0 v_msubst' []
   | Const(c, msubst) -> Const(c, eval_msubst msubst meta_offset v_msubst v_subst)
   | Dest(d, msubst') ->
     begin

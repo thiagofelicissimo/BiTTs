@@ -20,15 +20,6 @@ and v_msubst = v_arg list
 type v_ctx = v_tm list
 
 
-(* top-level definitions table *)
-
-module DefTbl = Map.Make(String)
-
-type def = {rhs : v_tm; ty : v_tm}
-type defs = def DefTbl.t
-let defs : defs ref = ref DefTbl.empty
-
-
 (* pretty printing functions *)
 
 let rec pp_vterm fmt t =

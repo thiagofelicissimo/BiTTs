@@ -7,7 +7,7 @@ type tm =
   | Meta of int * subst
   | Const of string * msubst
   | Dest of string * msubst
-  | Def of string (* top-level def *)
+  | Def of string * msubst (* top-level def *)
   | Ascr of tm * tm (* t :: ty *)
 
 and subst = tm list
@@ -49,6 +49,15 @@ type rew_rules = (rew_rule list) RewTbl.t
 let rew_rules : rew_rules ref = ref RewTbl.empty
 
 
+(* top-level definitions table *)
+
+module DefTbl = Map.Make(String)
+
+type def = {mctx : mctx; ty : tm; tm : tm}
+type defs = def DefTbl.t
+let defs : defs ref = ref DefTbl.empty
+
+
 let gen_id_subst (ctx : ctx) : subst =
   let rec aux ctx n =
     match ctx with
@@ -62,14 +71,6 @@ let gen_id_msubst (mctx : mctx) : msubst =
     | [] -> []
     | (ctx, _) :: mctx -> (List.length ctx, (Meta(n, gen_id_subst ctx) : tm)) :: aux mctx (n+1) in
   aux mctx 0
-
-(*
-let rec gen_id_msubst (mctx : mctx) : msubst =
-  match mctx with
-  | [] -> []
-  | (ctx, _) :: mctx -> (List.length ctx, Meta(List.length mctx, gen_id_subst ctx)) :: gen_id_msubst mctx
-*)
-
 
 (* pretty printing functions *)
 
@@ -85,7 +86,8 @@ let rec pp_term fmt t =
   | Dest(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
   | Const(name, []) -> fprintf fmt "%s" name
   | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
-  | Def(name) -> fprintf fmt "%s" name
+  | Def(name, []) -> fprintf fmt "%s" name
+  | Def(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
   | Ascr(t, ty) -> fprintf fmt "[%a] %a" pp_term ty pp_term t
 
 and pp_subst fmt subst =
