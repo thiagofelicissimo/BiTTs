@@ -48,6 +48,29 @@ module RewTbl = Map.Make(String)
 type rew_rules = (rew_rule list) RewTbl.t
 let rew_rules : rew_rules ref = ref RewTbl.empty
 
+
+let gen_id_subst (ctx : ctx) : subst =
+  let rec aux ctx n =
+    match ctx with
+    | [] -> []
+    | _ :: ctx -> Var(n) :: aux ctx (n+1) in
+  aux ctx 0
+
+let gen_id_msubst (mctx : mctx) : msubst =
+  let rec aux mctx n =
+    match mctx with
+    | [] -> []
+    | (ctx, _) :: mctx -> (List.length ctx, (Meta(n, gen_id_subst ctx) : tm)) :: aux mctx (n+1) in
+  aux mctx 0
+
+(*
+let rec gen_id_msubst (mctx : mctx) : msubst =
+  match mctx with
+  | [] -> []
+  | (ctx, _) :: mctx -> (List.length ctx, Meta(List.length mctx, gen_id_subst ctx)) :: gen_id_msubst mctx
+*)
+
+
 (* pretty printing functions *)
 
 let separator fmt () =
@@ -80,8 +103,7 @@ pp_print_list ~pp_sep:separator pp_ctx_entry fmt (List.rev ctx)
 
 let pp_mctx fmt mctx =
 let pp_mctx_entry fmt (ctx, ty) =
-  if ctx = [] then fprintf fmt "%a" pp_term ty
-  else fprintf fmt "{%a} : %a" pp_ctx ctx pp_term ty in
+  fprintf fmt "{%a} : %a" pp_ctx ctx pp_term ty in
 pp_print_list ~pp_sep:separator pp_mctx_entry fmt (List.rev mctx)
 
 let rec pp_p_term fmt t =

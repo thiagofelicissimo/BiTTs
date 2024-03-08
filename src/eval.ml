@@ -18,8 +18,8 @@ and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
   | [], [] -> []
   | (0, p_t) :: p_msubst, Value(v) :: v_msubst ->
     (match_tm p_t v) @ (match_msubst p_msubst v_msubst)
-  | (n, Meta) :: p_msubst, Closure(n', t', v_msubst', v_subst') :: v_msubst when n = n' ->
-    Closure(n', t', v_msubst', v_subst') :: (match_msubst p_msubst v_msubst)
+  | (n, Meta) :: p_msubst, Closure(n', t', meta_offset', v_msubst', v_subst') :: v_msubst when n = n' ->
+    Closure(n', t', meta_offset', v_msubst', v_subst') :: (match_msubst p_msubst v_msubst)
   | (n, _) :: _, _ ->
     (* matching inside binders not supported *)
     raise Match_failure
@@ -30,23 +30,23 @@ and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
    the environment given by a subst value (mapping occuring vars to values)
    and a msubst value (mapping occuring metas to values or closures) *)
 
-let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
+let rec eval_tm (t : tm) (meta_offset : int) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
   match t with
   | Var(n) -> List.nth v_subst n
-  | Ascr(t, ty) -> eval_tm t v_msubst v_subst
+  | Ascr(t, ty) -> eval_tm t meta_offset v_msubst v_subst
   | Meta(n, subst) ->
     begin match List.nth_opt v_msubst n with
     | Some Value(v) -> v
-    | Some Closure(n, t', v_msubst', v_subst') ->
-      eval_tm t' v_msubst' ((eval_subst subst v_msubst v_subst) @ v_subst')
-    | None -> (* if undefined, we treat the meta as an unknown *)
-      Meta(n, eval_subst subst v_msubst v_subst)
+    | Some Closure(n, t', meta_offset', v_msubst', v_subst') ->
+      eval_tm t' meta_offset' v_msubst' ((eval_subst subst meta_offset v_msubst v_subst) @ v_subst')
+    | None ->
+       Meta(n + meta_offset, eval_subst subst meta_offset v_msubst v_subst)
     end
   | Def(d) -> (DefTbl.find d !defs).rhs
-  | Const(c, msubst) -> Const(c, eval_msubst msubst v_msubst v_subst)
+  | Const(c, msubst) -> Const(c, eval_msubst msubst meta_offset v_msubst v_subst)
   | Dest(d, msubst') ->
     begin
-      let v_msubst' = eval_msubst msubst' v_msubst v_subst in
+      let v_msubst' = eval_msubst msubst' meta_offset v_msubst v_subst in
       let args =  v_msubst' in
       let try_match (p_msubst, r) =
         try
@@ -56,25 +56,25 @@ let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
       try
         List.iter try_match (try RewTbl.find d !rew_rules with _ -> []);
         Dest(d, v_msubst')
-      with Matched(result, r) -> eval_tm r result []
+      with Matched(result, r) -> eval_tm r meta_offset result []
     end
 
 
-and eval_subst (subst : subst) (v_msubst : v_msubst) (v_subst : v_subst) : v_subst =
-    List.map (fun t -> eval_tm t v_msubst v_subst) subst
+and eval_subst (subst : subst) (meta_offset : int)  (v_msubst : v_msubst) (v_subst : v_subst) : v_subst =
+    List.map (fun t -> eval_tm t meta_offset v_msubst v_subst) subst
 
-and eval_msubst (msubst : msubst) (v_msubst : v_msubst) (v_subst : v_subst) : v_msubst =
+and eval_msubst (msubst : msubst) (meta_offset : int)  (v_msubst : v_msubst) (v_subst : v_subst) : v_msubst =
     List.map (fun (n, t) ->
       if n = 0
-      then Value(eval_tm t v_msubst v_subst)
-      else Closure(n, t, v_msubst, v_subst)) msubst
+      then Value(eval_tm t meta_offset v_msubst v_subst)
+      else Closure(n, t, meta_offset, v_msubst, v_subst)) msubst
 
-let rec eval_ctx (ctx : ctx) (v_msubst : v_msubst) (depth : int) : v_ctx * v_subst * int =
+let rec eval_ctx (ctx : ctx) (meta_offset : int)  (v_msubst : v_msubst) (depth : int) : v_ctx * v_subst * int =
   match ctx with
   | [] -> ([], [], depth)
   | ty :: ctx ->
-    let v_ctx, v_subst, depth = eval_ctx ctx v_msubst depth in
-    let v_ty = eval_tm ty v_msubst v_subst in
+    let v_ctx, v_subst, depth = eval_ctx ctx meta_offset v_msubst depth in
+    let v_ty = eval_tm ty meta_offset v_msubst v_subst in
     (v_ty :: v_ctx, Var(depth) :: v_subst, depth + 1)
 
 
@@ -88,6 +88,7 @@ let rec gen_fresh n depth =
   else Var(depth + n - 1) :: gen_fresh (n-1) depth
 
 let rec equal_tm (v_t : v_tm) (v_t' : v_tm) (depth : int) : unit =
+  (* Format.printf "checking if %a is equal to %a@." pp_term (read_back_tm depth v_t) pp_term (read_back_tm depth v_t'); *)
   match v_t, v_t' with
   | Var(n), Var(m) when n = m -> ()
   | Const(c, v_msubst), Const(c', v_msubst') when c = c' ->
@@ -96,7 +97,8 @@ let rec equal_tm (v_t : v_tm) (v_t' : v_tm) (depth : int) : unit =
     equal_msubst v_msubst v_msubst' depth
   | Meta(n, v_subst), Meta(n', v_subst') when n = n' ->
     equal_subst v_subst v_subst' depth
-  | _ -> raise Equality_check_error
+  | _ ->
+    raise Equality_check_error
 
 and equal_subst (v_subst : v_subst) (v_subst' : v_subst) (depth : int) : unit =
   if (List.length v_subst) <> (List.length v_subst') then raise Equality_check_error;
@@ -107,10 +109,10 @@ and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : un
   List.iter2
     begin fun x y -> match x, y with
     | Value(v_t), Value(v_t') -> equal_tm v_t v_t' depth
-    | Closure(n, t, v_msubst, v_subst), Closure(n', t', v_msubst', v_subst') when n = n' ->
+    | Closure(n, t, meta_offset, v_msubst, v_subst), Closure(n', t', meta_offset', v_msubst', v_subst') when n = n' ->
       let fresh = gen_fresh n depth in
-      let v_t = eval_tm t v_msubst (fresh @ v_subst) in
-      let v_t' = eval_tm t' v_msubst' (fresh @ v_subst') in
+      let v_t = eval_tm t meta_offset v_msubst (fresh @ v_subst) in
+      let v_t' = eval_tm t' meta_offset' v_msubst' (fresh @ v_subst') in
       equal_tm v_t v_t' (depth + n)
     | _ -> raise Equality_check_error end
     v_msubst v_msubst'
@@ -120,7 +122,7 @@ and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : un
 (* READ_BACK : reads back a value into its corresponding (deep) normal form
    in the regular syntax *)
 
-let rec read_back_tm (depth : int) (t : v_tm) : tm =
+and read_back_tm (depth : int) (t : v_tm) : tm =
   match t with
   | Var(i) -> Var(depth - (i + 1))
   | Dest(name, msubst) -> Dest(name, read_back_msubst depth msubst)
@@ -134,6 +136,12 @@ and read_back_msubst (depth : int) (msubst : v_msubst) : msubst =
   match msubst with
   | [] -> []
   | Value(v) :: msubst' -> (0, read_back_tm depth v) :: read_back_msubst depth msubst'
-  | Closure(n, t, v_msubst', v_subst') :: msubst' ->
-    let v_t = eval_tm t v_msubst' (gen_fresh n depth @ v_subst') in
+  | Closure(n, t, meta_offset', v_msubst', v_subst') :: msubst' ->
+    let v_t = eval_tm t meta_offset' v_msubst' (gen_fresh n depth @ v_subst') in
     (n, read_back_tm (depth + n) v_t) :: read_back_msubst depth msubst'
+
+let rec read_back_ctx (depth : int) (ctx : v_ctx) : ctx =
+  match ctx with
+  | [] -> []
+  | (ty :: ctx) ->
+    read_back_tm (depth + List.length ctx) ty :: read_back_ctx depth ctx

@@ -24,8 +24,8 @@ type entry =
   | Sort of string * mctx
   | Cons of string * mctx * mctx * imctx * tm
     (* c (Xi_p; Xi_c; Vi/Xi_i) : T *)
-  | Dest of string * mctx * mctx * string * tm * mctx * tm
-    (* d (Xi_p; Xi_i; x : T; Xi_d) : U *)
+  | Dest of string * mctx * string * tm * mctx * tm
+    (* d (Xi_pi; x : T; Xi_d) : U *)
   | Rew of tm * tm
   | Eval of tm
   | Eq of tm * tm
@@ -195,9 +195,9 @@ let pp_entry fmt entry =
   | Cons(name, mctx1, mctx2, imctx, ty) ->
     fprintf fmt "constructor %s (%a) (%a) (%a) : %a@."
       name pp_mctx mctx1 pp_mctx mctx2 pp_imctx imctx pp_term ty
-  | Dest(name, mctx1, mctx2, name_arg, ty_arg, mctx3, ty) ->
-    fprintf fmt "destructor %s (%a) (%a) (%s : %a) (%a) : %a@."
-    name pp_mctx mctx1 pp_mctx mctx2 name_arg pp_term ty_arg pp_mctx mctx3 pp_term ty
+  | Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) ->
+    fprintf fmt "destructor %s (%a) (%s : %a) (%a) : %a@."
+    name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty
   | Rew(lhs, rhs) ->
     fprintf fmt "rewrite %a --> %a@." pp_term lhs pp_term rhs
   | Let(name, ty, t) -> fprintf fmt "let %s : %a := %a@." name pp_term ty pp_term t

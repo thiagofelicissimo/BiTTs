@@ -17,28 +17,28 @@
 
 term:
   | id=IDENT { NotApplied(id) }
-  | id=IDENT LBRACK subst=subst RBRACK { Meta(id, subst) }  
+  | id=IDENT LBRACK subst=subst RBRACK { Meta(id, subst) }
   | id=IDENT LPAR msubst=msubst RPAR { Symb(id, msubst) }
-  | LSQB ty=term RSQB t=term { Ascr(t, ty) }  
-  
+  | LSQB ty=term RSQB t=term { Ascr(t, ty) }
+
 subst:
   | e=separated_list(COMMA, term) { List.rev e }
 
 scope:
   | l=nonempty_list(IDENT) { List.rev l }
 
-arg: 
+arg:
   | t=term { ([], t) }
   | scope=scope DOT t=term { (scope, t) }
 
-msubst: 
+msubst:
   | e=separated_list(COMMA, arg) { List.rev e }
 
 
 ctx_entry:
   | id=IDENT COLON ty=term { (id, ty) }
 
-ctx: 
+ctx:
   | LBRACK e=separated_list(COMMA, ctx_entry) RBRACK { List.rev e }
 
 
@@ -46,8 +46,8 @@ mctx_entry:
   | id=IDENT COLON ty=term { (id, [], ty) }
   | id=IDENT ctx=ctx COLON ty=term { (id, ctx, ty) }
 
-mctx: 
-  | LPAR e=separated_list(COMMA, mctx_entry) RPAR { List.rev e }  
+mctx:
+  | LPAR e=separated_list(COMMA, mctx_entry) RPAR { List.rev e }
 
 imctx_entry:
   | t=term SLASH id=IDENT COLON ty=term { (id, t, ty) }
@@ -57,19 +57,17 @@ imctx:
 
 entry:
   | SORT id=IDENT mctx=mctx { Sort(id, mctx)}
-  | CONS id=IDENT mctx1=mctx mctx2=mctx COLON ty=term 
-    { Cons(id, mctx1, mctx2, [], ty) }      
-  | CONS id=IDENT mctx1=mctx mctx2=mctx imctx=imctx COLON ty=term 
-    { Cons(id, mctx1, mctx2, imctx, ty) }    
-  | DEST id=IDENT mctx1=mctx LSQB id_arg=IDENT COLON ty_arg=term RSQB mctx3=mctx COLON ty=term 
-    { Dest(id, mctx1, [], id_arg, ty_arg, mctx3, ty) }  
-  | DEST id=IDENT mctx1=mctx mctx2=mctx LSQB id_arg=IDENT COLON ty_arg=term RSQB mctx3=mctx COLON ty=term 
-    { Dest(id, mctx1, mctx2, id_arg, ty_arg, mctx3, ty) }
+  | CONS id=IDENT mctx1=mctx mctx2=mctx COLON ty=term
+    { Cons(id, mctx1, mctx2, [], ty) }
+  | CONS id=IDENT mctx1=mctx mctx2=mctx imctx=imctx COLON ty=term
+    { Cons(id, mctx1, mctx2, imctx, ty) }
+  | DEST id=IDENT mctx1=mctx LSQB id_arg=IDENT COLON ty_arg=term RSQB mctx2=mctx COLON ty=term
+    { Dest(id, mctx1, id_arg, ty_arg, mctx2, ty) }
   | REW lhs=term REDUCES rhs=term { Rew(lhs, rhs) }
   | LET id=IDENT COLON ty=term DEF tm=term
-    { Let(id, ty, tm) }  
+    { Let(id, ty, tm) }
   | EVAL tm=term
-    { Eval(tm) }    
+    { Eval(tm) }
   | CHECK t=term EQUAL u=term { Eq(t, u) }
 
 program:

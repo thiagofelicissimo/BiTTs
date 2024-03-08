@@ -143,7 +143,7 @@ constructor Eq () (A : Ty, x : Tm(A), y : Tm(A)) : Ty
 
 constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Tm(Eq(A, x, y))
 
-destructor J (A : Ty, x : Tm(A)) (y : Tm(A))
+destructor J (A : Ty, x : Tm(A), y : Tm(A))
              [t : Tm(Eq(A, x, y))]
              (P{y : Tm(A), e : Tm(Eq(A, x, y))} : Ty, p : Tm(P{x, refl}))
              : Tm(P{y, t})
@@ -172,7 +172,7 @@ constructor nilV (A : Ty) () (0 / n : Tm(ℕ)) : Tm(Vec(A, n))
 constructor consV (A : Ty) (m : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, m)))
                            (S(m) / n : Tm(ℕ)) : Tm(Vec(A, n))
 
-destructor ind_Vec  (A : Ty) (n : Tm(ℕ))
+destructor ind_Vec  (A : Ty, n : Tm(ℕ))
                     [l : Tm(Vec(A, n))]
                     (P{x : Tm(ℕ), _ : Tm(Vec(A, x))} : Ty,
                      p_nil : Tm(P{0, nilV}),
@@ -221,6 +221,7 @@ destructor ind_W    (A : Ty, B{x : Tm(A)} : Ty)
                        y : Tm(Π(B{x}, _. W(A, x.B{x}))),
                        z : Tm(Π(B{x}, x'. P{﹫(y, x')}))} : Tm(P{sup(x, y)}) )
                        : Tm(P{t})
+
 
 rewrite ind_W(sup(a, f), x. P{x}, x y z. p{x, y, z}) -->
         p{a, f, λ(x. ind_W(﹫(f, x), x. P{x}, x y z. p{x, y, z}))}
