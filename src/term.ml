@@ -6,7 +6,7 @@ type tm =
   | Var of int (* index *)
   | Meta of int * subst
   | Const of string * msubst
-  | Dest of string * tm * msubst
+  | Dest of string * msubst
   | Def of string (* top-level def *)
   | Ascr of tm * tm (* t :: ty *)
 
@@ -58,8 +58,8 @@ let rec pp_term fmt t =
   match t with
   | Var(n) -> fprintf fmt "%d" n
   | Meta(n, subst) -> fprintf fmt "%d{%a}" n pp_subst subst
-  | Dest(name, t, []) -> fprintf fmt "%s(%a)" name pp_term t
-  | Dest(name, t, msubst) -> fprintf fmt "%s(%a; %a)" name pp_term t pp_msubst msubst
+  | Dest(name, []) -> fprintf fmt "%s" name
+  | Dest(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
   | Const(name, []) -> fprintf fmt "%s" name
   | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
   | Def(name) -> fprintf fmt "%s" name

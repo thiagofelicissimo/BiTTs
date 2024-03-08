@@ -26,7 +26,7 @@ and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
   | _ -> raise Match_failure
 
 
-(* EVAL : we evaluate a tm/subst/msubst to a tm/subst/msubst value, under
+(* EVAL : we evaluate from the regular syntax to the syntax of values, under
    the environment given by a subst value (mapping occuring vars to values)
    and a msubst value (mapping occuring metas to values or closures) *)
 
@@ -35,18 +35,19 @@ let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
   | Var(n) -> List.nth v_subst n
   | Ascr(t, ty) -> eval_tm t v_msubst v_subst
   | Meta(n, subst) ->
-    begin match List.nth v_msubst n with
-    | Value(v) -> v
-    | Closure(n, t', v_msubst', v_subst') ->
+    begin match List.nth_opt v_msubst n with
+    | Some Value(v) -> v
+    | Some Closure(n, t', v_msubst', v_subst') ->
       eval_tm t' v_msubst' ((eval_subst subst v_msubst v_subst) @ v_subst')
+    | None -> (* if undefined, we treat the meta as an unknown *)
+      Meta(n, eval_subst subst v_msubst v_subst)
     end
   | Def(d) -> (DefTbl.find d !defs).rhs
   | Const(c, msubst) -> Const(c, eval_msubst msubst v_msubst v_subst)
-  | Dest(d, u, msubst') ->
+  | Dest(d, msubst') ->
     begin
-      let v_u = eval_tm u v_msubst v_subst in
       let v_msubst' = eval_msubst msubst' v_msubst v_subst in
-      let args =  v_msubst' @ [Value(v_u)] in
+      let args =  v_msubst' in
       let try_match (p_msubst, r) =
         try
           let result = match_msubst p_msubst args in
@@ -54,7 +55,7 @@ let rec eval_tm (t : tm) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
         with Match_failure -> () in
       try
         List.iter try_match (try RewTbl.find d !rew_rules with _ -> []);
-        Dest(d, v_u, v_msubst')
+        Dest(d, v_msubst')
       with Matched(result, r) -> eval_tm r result []
     end
 
@@ -91,10 +92,15 @@ let rec equal_tm (v_t : v_tm) (v_t' : v_tm) (depth : int) : unit =
   | Var(n), Var(m) when n = m -> ()
   | Const(c, v_msubst), Const(c', v_msubst') when c = c' ->
     equal_msubst v_msubst v_msubst' depth
-  | Dest(d, v_t, v_msubst), Dest(d', v_t', v_msubst') when d = d' ->
-    equal_tm v_t v_t' depth;
+  | Dest(d, v_msubst), Dest(d', v_msubst') when d = d' ->
     equal_msubst v_msubst v_msubst' depth
+  | Meta(n, v_subst), Meta(n', v_subst') when n = n' ->
+    equal_subst v_subst v_subst' depth
   | _ -> raise Equality_check_error
+
+and equal_subst (v_subst : v_subst) (v_subst' : v_subst) (depth : int) : unit =
+  if (List.length v_subst) <> (List.length v_subst') then raise Equality_check_error;
+  List.iter2 (fun x y -> equal_tm x y depth) v_subst v_subst'
 
 and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : unit =
   if (List.length v_msubst) <> (List.length v_msubst') then raise Equality_check_error;
@@ -112,13 +118,17 @@ and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : un
 
 
 (* READ_BACK : reads back a value into its corresponding (deep) normal form
-   in the syntax of regular terms/msubsts *)
+   in the regular syntax *)
 
 let rec read_back_tm (depth : int) (t : v_tm) : tm =
   match t with
   | Var(i) -> Var(depth - (i + 1))
-  | Dest(name, t, msubst) -> Dest(name, read_back_tm depth t, read_back_msubst depth msubst)
+  | Dest(name, msubst) -> Dest(name, read_back_msubst depth msubst)
   | Const(name, msubst) -> Const(name, read_back_msubst depth msubst)
+  | Meta(n, subst) -> Meta(n, read_back_subst depth subst)
+
+and read_back_subst  (depth : int) (subst : v_subst) : subst =
+  List.map (read_back_tm depth) subst
 
 and read_back_msubst (depth : int) (msubst : v_msubst) : msubst =
   match msubst with

@@ -57,13 +57,13 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
   | NotApplied(name) ->
     begin match get_db name scope, get_db name mscope with
     | None, Some i -> T.Meta(i, [])
-    | Some i, None | Some i, Some _ -> T.Var(i)
+    | Some i, _ -> T.Var(i)
     | None, None ->
       begin match T.RuleTbl.find_opt name !T.schem_rules with
-      | Some T.Const(_) | Some T.Sort(_) -> T.Const(name, [])
-      | Some T.Dest(_) -> raise Dest_not_applied
+      | Some _ -> T.Const(name, [])
       | None ->
-        if (V.DefTbl.find_opt name !V.defs) <> None then T.Def(name)
+        if (V.DefTbl.find_opt name !V.defs) <> None
+        then T.Def(name)
         else raise Name_not_in_scope end end
   | Meta(name, subst) ->
     begin match get_db name mscope with
@@ -73,12 +73,8 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
     begin match T.RuleTbl.find_opt name !T.schem_rules with
     | None -> raise Name_not_in_scope
     | Some(Const(_)) | Some(Sort(_)) -> T.Const(name, scope_msubst msubst mscope scope)
-    | Some(Dest(_)) ->
-      begin match List.rev msubst with
-      | [] -> raise Dest_not_applied
-      | ([], t) :: msubst' ->
-        T.Dest(name, scope_tm t mscope scope, List.rev @@ scope_msubst msubst' mscope scope)
-      | _ -> raise Dest_binds_first_arg end end
+    | Some(Dest(_)) -> T.Dest(name, scope_msubst msubst mscope scope)
+  end
 
 and scope_subst (subst : subst) (mscope : string list) (scope : string list) : T.subst =
   List.map (fun x -> scope_tm x mscope scope) subst
