@@ -4,11 +4,11 @@ all:
 	dune build
 
 examples:
-	dune exec -- bitt examples/mltt.bitt
-	dune exec -- bitt examples/hol.bitt
-	dune exec -- bitt examples/mltt-tarski.bitt
-	dune exec -- bitt examples/mltt-tarski-heterogeneous.bitt
-	dune exec -- bitt examples/mltt-coquand.bitt
+	dune exec -- bitts examples/mltt.bitt
+	dune exec -- bitts examples/hol.bitt
+	dune exec -- bitts examples/mltt-tarski.bitt
+	dune exec -- bitts examples/mltt-tarski-heterogeneous.bitt
+	dune exec -- bitts examples/mltt-coquand.bitt
 
 test-big-numbers:
-	dune exec -- bitt examples/big-numbers.bitt
+	dune exec -- bitts examples/big-numbers.bitt

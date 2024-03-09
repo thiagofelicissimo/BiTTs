@@ -1,6 +1,6 @@
 (lang dune 3.3)
 
-(name bitt)
+(name bitts)
 
 (using menhir 2.1)
 
@@ -18,7 +18,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name bitt)
+ (name bitts)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends

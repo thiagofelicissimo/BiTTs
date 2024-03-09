@@ -4,9 +4,9 @@
   (--explain)))
 
 (executable
- (package bitt)
- (name bitt)
- (public_name bitt)
+ (package bitts)
+ (name bitts)
+ (public_name bitts)
  (libraries sedlex menhirLib)
  (preprocess
   (pps sedlex.ppx)))
