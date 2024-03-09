@@ -13,7 +13,7 @@ constructor Sₗ () (_ : Lvl) : Lvl
 destructor maxₗ () [i : Lvl] (j : Lvl) : Lvl
 
 equation maxₗ(0ₗ, j) --> j
-equation maxₗ(i, 0ₗ) --> i
+equation maxₗ(Sₗ(i), 0ₗ) --> Sₗ(i)
 equation maxₗ(Sₗ(i), Sₗ(j)) --> Sₗ(maxₗ(i, j))
 
 

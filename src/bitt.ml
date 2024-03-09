@@ -7,6 +7,9 @@ module L = Sedlexer
 module E = Eval
 open Common
 
+
+exception Overlap_detected
+
 let colored n s =
   "\027[3" ^ string_of_int n ^ "m" ^ s ^ "\027[m"
 
@@ -94,18 +97,34 @@ let () =
 
           Format.printf "[%s %s] %s@." (darkblue "destructor") name (green "OK")
 
-        | C.Rew(lhs, rhs) ->
-            begin match lhs with
-            | Symb(name, msubst) -> begin
-              (match T.RuleTbl.find name !T.schem_rules with | Dest(_) -> () | _ -> assert false);
+        | C.Rew(mctx, lhs, rhs) ->
+
+          if mctx <> None then assert false;
+          let name, msubst = match lhs with
+            | Symb(name, msubst) ->
+              (* we verify that name is a destructor *)
+              (match T.RuleTbl.find name !T.schem_rules with
+              | Dest(_) -> () | _ -> assert false);
               if msubst = [] then assert false;
-              let p_msubst, mscope = C.scope_p_msubst msubst in
-              let rhs' = C.scope_tm rhs mscope [] in
-              let rews = try T.RewTbl.find name !T.rew_rules with _ -> [] in
-              T.rew_rules :=
-                T.RewTbl.add name ((p_msubst, rhs') :: rews) !T.rew_rules end
-            | _ -> assert false
-            end;
+              name, msubst
+            | _ -> assert false in
+
+
+          let p_msubst, mscope = C.scope_p_msubst msubst in
+          let rhs' = C.scope_tm rhs mscope [] in
+          let rews = try T.RewTbl.find name !T.rew_rules with _ -> [] in
+
+
+          (* checks that rule does not overlap any other one *)
+          List.iter (fun (p_msubst', _) ->
+            try
+              T.check_unify_msubst p_msubst p_msubst';
+              raise Overlap_detected
+            with T.Do_not_unify -> ()
+            ) rews;
+
+          T.rew_rules := T.RewTbl.add name ((p_msubst, rhs') :: rews) !T.rew_rules;
+
           Format.printf "[%s] %s@." (darkblue "equation") (yellow "type-checker for rewrite rules not yet implemented")
 
         | Eval(tm) ->

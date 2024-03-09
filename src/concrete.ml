@@ -26,7 +26,7 @@ type entry =
     (* c (Xi_p; Xi_c; Vi/Xi_i) : T *)
   | Dest of string * mctx * string * tm * mctx * tm
     (* d (Xi_pi; x : T; Xi_d) : U *)
-  | Rew of tm * tm
+  | Rew of mctx option * tm * tm
   | Eval of tm
   | Eq of tm * tm
 
@@ -201,8 +201,10 @@ let pp_entry fmt entry =
   | Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) ->
     fprintf fmt "destructor %s (%a) (%s : %a) (%a) : %a@."
     name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty
-  | Rew(lhs, rhs) ->
+  | Rew(None, lhs, rhs) ->
     fprintf fmt "rewrite %a --> %a@." pp_term lhs pp_term rhs
+  | Rew(Some mctx, lhs, rhs) ->
+    fprintf fmt "rewrite (%a) %a --> %a@." pp_mctx mctx pp_term lhs pp_term rhs
   | Let(name, mctx, ty, t) ->
     fprintf fmt "let %s (%a) : %a := %a@." name pp_mctx mctx pp_term ty pp_term t
   | Eval(t) -> fprintf fmt "eval %a@." pp_term t

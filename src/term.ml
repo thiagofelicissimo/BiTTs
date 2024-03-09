@@ -72,6 +72,23 @@ let gen_id_msubst (mctx : mctx) : msubst =
     | (ctx, _) :: mctx -> (List.length ctx, (Meta(n, gen_id_subst ctx) : tm)) :: aux mctx (n+1) in
   aux mctx 0
 
+(* checks if two patterns unify *)
+
+exception Do_not_unify
+let rec check_unify_tm t t' =
+  match t, t' with
+  | Meta, _ -> ()
+  | _, Meta -> ()
+  | Const(name, msubst), Const(name', msubst') ->
+    if name <> name' then raise Do_not_unify;
+    check_unify_msubst msubst msubst'
+
+and check_unify_msubst msubst msubst' =
+  if List.length msubst <> List.length msubst' then raise Do_not_unify;
+  List.iter2 (fun (n,t) (n',t') ->
+    if n <> n' then raise Do_not_unify;
+    check_unify_tm t t') msubst msubst'
+
 (* pretty printing functions *)
 
 let separator fmt () =
