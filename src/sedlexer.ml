@@ -14,6 +14,7 @@ let keyword_or_ident =
         "sort", SORT;
         "let", LET;
         "assert", ASSERT;
+        "in", IN;
         "evaluate", EVAL
     ] ;
   fun s ->
@@ -38,6 +39,7 @@ let rec token lb =
   | "{"  -> LBRACK
   | "}"  -> RBRACK
   | ":" -> COLON
+(*  | "::" -> COCOLON *)
   | "." -> DOT
   | "," -> COMMA
   | "-->" -> REDUCES

@@ -108,6 +108,11 @@ evaluate fact_4
 let redex : Tm(ℕ) := ﹫([Tm(Π(ℕ, _. ℕ))] λ(x. x), 0)
 evaluate redex
 
+(* we can also use let expressions *)
+let redex' : Tm(ℕ) :=
+    let ty : Ty := Π(ℕ, _. ℕ) in
+    ﹫([Tm(ty)] λ(x. x), 0)
+
 
 (* Lists *)
 constructor List () (A : Ty) : Ty

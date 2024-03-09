@@ -38,6 +38,11 @@ let rec infer (mctx : mctx) (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =
     then Format.printf "inferring %a@.  with mctx = %a@.   with ctx = %a@.   with v_subst = %a@."
           pp_term t pp_mctx mctx pp_ctx (read_back_ctx 0 v_ctx) pp_vsubst v_subst;
   match t with
+  | Let(t, u) ->
+    let t_ty = infer mctx v_ctx v_subst t in
+    let t_v = eval_tm t 0 [] v_subst in
+    infer mctx (t_ty :: v_ctx) (t_v :: v_subst) u
+
   | Ascr(t, ty) ->
     check_sort mctx v_ctx v_subst ty;
     let v_ty = eval_tm ty 0 [] v_subst in
@@ -97,6 +102,10 @@ and check (mctx : mctx) (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) (sort : v_t
       let v_msubst = check_msubst mctx v_ctx v_subst pars msubst args_mctx in
       let expected_ixs = eval_msubst inst_msubst 0 v_msubst [] in
       equal_msubst ixs expected_ixs (List.length v_subst)
+  | Let(t, u) ->
+    let t_ty = infer mctx v_ctx v_subst t in
+    let t_v = eval_tm t 0 [] v_subst in
+    check mctx (t_ty :: v_ctx) (t_v :: v_subst) u sort
 
 and check_msubst (mctx : mctx) (v_ctx : v_ctx) (v_subst : v_subst) (v_msubst : v_msubst) (msubst : msubst) (mctx' : mctx) : v_msubst =
   if typing_mgs then Format.printf "checking msubst %a under mctx %a@.  wiht v_subst= %a@."
@@ -109,7 +118,9 @@ and check_msubst (mctx : mctx) (v_ctx : v_ctx) (v_subst : v_subst) (v_msubst : v
     let v_ctx', v_subst', _ = eval_ctx ctx' 0 v_msubst depth in
     let v_sort = eval_tm sort 0 v_msubst v_subst' in
     check mctx (v_ctx' @ v_ctx) (v_subst' @ v_subst) t v_sort;
-    let t' = if ctx' = [] then Value(eval_tm t 0 [] v_subst) else Closure(List.length ctx', t, 0, [], v_subst) in
+    let t' =
+      if ctx' = [] then Value(eval_tm t 0 [] v_subst)
+      else Closure(List.length ctx', t, 0, [], v_subst) in
     if typing_mgs then Format.printf "now t was %a and t' is %a, and v_subst was %a@."
       pp_term t pp_vmsubst [t'] pp_vsubst v_subst;
     t' :: v_msubst

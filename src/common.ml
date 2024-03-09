@@ -1,4 +1,6 @@
 
+exception TODO
+
 let colored n s =
   "\027[3" ^ string_of_int n ^ "m" ^ s ^ "\027[m"
 

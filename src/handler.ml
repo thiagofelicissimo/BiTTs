@@ -8,6 +8,9 @@ open Common
 
 exception Overlap_detected
 
+exception TODO
+
+let rewrite_rule_checker rule = raise TODO
 
 let handle_entry entry =
   match entry with

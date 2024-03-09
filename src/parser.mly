@@ -4,9 +4,9 @@
 
 %}
 %token EOF
-%token CONS DEST SORT REW LET EVAL ASSERT
+%token CONS DEST SORT REW LET EVAL ASSERT IN
 %token LPAR RPAR LBRACK RBRACK LSQB RSQB
-%token COLON DOT COMMA REDUCES DEF EQUAL SLASH
+%token COLON DOT COMMA REDUCES DEF EQUAL SLASH  (* COCOLON*)
 %token <string> IDENT
 
 %start program
@@ -16,6 +16,11 @@
 
 
 term:
+(* | t=term COCOLON ty=term { Ascr(t, ty) }*)
+  | LET id=IDENT COLON ty=term DEF t=term IN u=term
+  { Let(id, Ascr(t, ty), u) }
+  | LET id=IDENT DEF t=term IN u=term
+  { Let(id, t, u) }
   | id=IDENT { NotApplied(id) }
   | id=IDENT LBRACK subst=subst RBRACK { Meta(id, subst) }
   | id=IDENT LPAR msubst=msubst RPAR { Symb(id, msubst) }

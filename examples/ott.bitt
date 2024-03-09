@@ -1,0 +1,190 @@
+
+(* MLTT with a type-in-type Taski-style universe *)
+
+(* Judgment forms *)
+sort Ty ()
+sort Tm (A : Ty)
+
+(* Taski-style universe *)
+constructor U () () : Ty
+destructor El () [A : Tm(U)] () : Ty
+
+(* Dependent products *)
+constructor Π   ()
+                (A : Ty, B{x : Tm(A)} : Ty)
+                : Ty
+
+constructor λ   (A : Ty, B{x : Tm(A)} : Ty)
+                (t{x : Tm(A)} : Tm(B{x}))
+                : Tm(Π(A, x. B{x}))
+
+destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
+                [t : Tm(Π(A, x. B{x}))]
+                (u : Tm(A))
+                : Tm(B{u})
+
+equation ﹫(λ(x. t{x}), u) --> t{u}
+
+constructor π () (a : Tm(U), b{_ : Tm(El(a))} : Tm(U)) : Tm(U)
+equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
+
+
+(* W Types *)
+constructor W () (A : Ty, B{x : Tm(A)} : Ty) : Ty
+constructor sup (A : Ty, B{x : Tm(A)} : Ty)
+                (a : Tm(A), f : Tm(Π(B{a}, _. W(A, x.B{x}))))
+                : Tm(W(A, x.B{x}))
+
+destructor Wind     (A : Ty, B{x : Tm(A)} : Ty)
+                    [t : Tm(W(A, x.B{x}))]
+                    (P{x : Tm(W(A, x.B{x}))} : Ty,
+                     p{x : Tm(A),
+                       y : Tm(Π(B{x}, _. W(A, x.B{x}))),
+                       z : Tm(Π(B{x}, x'. P{﹫(y, x')}))} : Tm(P{sup(x, y)}) )
+                       : Tm(P{t})
+
+
+equation Wind(sup(a, f), x. P{x}, x y z. p{x, y, z}) -->
+         p{a, f, λ(x. Wind(﹫(f, x), x. P{x}, x y z. p{x, y, z}))}
+
+constructor w () (a : Tm(U), b{x : Tm(El(a))} : Tm(U)) : Tm(U)
+equation El(w(a, x.b{x})) --> W(El(a), x.El(b{x}))
+
+(* empty type *)
+constructor ∅ () () : Ty
+(* we add ∅ind as a constructor,
+   allowing us to omit P *)
+constructor ∅ind (P : Ty) (x : Tm(∅)) : Tm(P)
+
+constructor c∅ () () : Tm(U)
+equation El(c∅) --> ∅
+
+(* singleton type *)
+constructor ⋆ () () : Ty
+constructor I () () : Tm(⋆)
+
+destructor ⋆ind () [x : Tm(⋆)]
+                (P {x : Tm(⋆)} : Ty,
+                 p : Tm(P{I}))
+                : Tm(P{x})
+equation ⋆ind(I, x. P{x}, p) --> p
+
+constructor c⋆ () () : Tm(U)
+equation El(c⋆) --> ⋆
+
+(* booleans *)
+constructor 𝔹 () () : Ty
+constructor true () () : Tm(𝔹)
+constructor false () () : Tm(𝔹)
+
+destructor if () [x : Tm(𝔹)]
+                 (P{x : Tm(𝔹)} : Ty,
+                  a : Tm(P{true}),
+                  b : Tm(P{false})) : Tm(P{x})
+equation if(true, x.P{x}, a, b) --> a
+equation if(false, x.P{x}, a, b) --> b
+
+constructor c𝔹 () () : Tm(U)
+equation El(c𝔹) --> 𝔹
+
+
+(* observational equality *)
+
+constructor Eq () (A : Ty, a : Tm(A), B : Ty, b : Tm(B)) : Ty
+
+constructor refl (A : Ty, a : Tm(A)) ()
+                 (A / B : Ty, a / b : Tm(B)) : Tm(Eq(A, a, B, b))
+
+constructor sym (A : Ty, a : Tm(A), B : Ty, b : Tm(B))
+                (p : Tm(Eq(B, b, A, a))) : Tm(Eq(A, a, B, b))
+
+constructor trans (A : Ty, a : Tm(A), C : Ty, c : Tm(C))
+                  (B : Ty, b : Tm(B), p : Tm(Eq(A, a, B, b)), q : Tm(Eq(B, b, C, c)))
+                  : Tm(Eq(A, a, C, c))
+
+constructor EqΠΠ_i (A : Ty,  B{x : Tm(A)} : Ty,   f : Tm(Π(A, x.B{x})),
+                    A' : Ty, B'{x : Tm(A')} : Ty, f' : Tm(Π(A', x.B'{x})))
+                   (p {x : Tm(A), x' : Tm(A'), e : Tm(Eq(A, x, A', x'))}
+                    : Tm(Eq(B{x}, ﹫(f, x), B'{x'}, ﹫(f', x'))))
+                   : Tm(Eq(Π(A, x.B{x}), f, Π(A', x.B'{x}), f'))
+
+destructor EqΠΠ_e (A : Ty,  B{x : Tm(A)} : Ty,   f : Tm(Π(A, x.B{x})),
+                   A' : Ty, B'{x : Tm(A')} : Ty, f' : Tm(Π(A', x.B'{x})))
+                  [p : Tm(Eq(Π(A, x.B{x}), f, Π(A', x.B'{x}), f'))]
+                  (x : Tm(A), x' : Tm(A'), e : Tm(Eq(A, x, A', x')))
+                  : Tm(Eq(B{x}, ﹫(f, x), B'{x'}, ﹫(f', x')))
+
+constructor EqWW_i (A : Ty,  B {x : Tm(A )} : Ty, a  : Tm(A ), f  : Tm(Π(B {a }, _. W(A,  x .B {x }))),
+                    A' : Ty, B'{x : Tm(A')} : Ty, a' : Tm(A'), f' : Tm(Π(B'{a'}, _. W(A', x'.B'{x'}))))
+                   (p {x : Tm(B{a}), x' : Tm(B'{a'}), e : Tm(Eq(B{a}, x, B'{a'}, x'))}
+                    : Tm(Eq(W(A, x.B{x}), ﹫(f, x), W(A', x'.B'{x'}), ﹫(f', x'))))
+                   : Tm(Eq(W(A, x.B{x}), sup(a, f), W(A', x'.B'{x'}), sup(a', f')))
+
+destructor EqWW_e (A : Ty,  B {x : Tm(A )} : Ty, a  : Tm(A ), f  : Tm(Π(B {a }, _. W(A,  x .B {x }))),
+                   A' : Ty, B'{x : Tm(A')} : Ty, a' : Tm(A'), f' : Tm(Π(B'{a'}, _. W(A', x'.B'{x'}))))
+                  [p : Tm(Eq(W(A, x.B{x}), sup(a, f), W(A', x'.B'{x'}), sup(a', f')))]
+                  (x : Tm(B{a}), x' : Tm(B'{a'}), e : Tm(Eq(B{a}, x, B'{a'}, x')))
+                  : Tm(Eq(W(A, x.B{x}), ﹫(f, x), W(A', x'.B'{x'}), ﹫(f', x')))
+
+constructor EqUUππ_i (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
+                      a' : Tm(U), b'{x' : Tm(El(a'))} : Tm(U))
+                     (p1 : Tm(Eq(U, a', U, a)),
+                      p2 {x' : Tm(El(a')), x : Tm(El(a)), e : Tm(Eq(U, a', U, a))}
+                       : Tm(Eq(U, b{x}, U, b'{x'})))
+                     : Tm(Eq(U, π(a, x. b{x}), U, π(a', x'. b'{x'})))
+
+destructor EqUUππ_e1  (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
+                       a' : Tm(U), b'{x' : Tm(El(a'))} : Tm(U))
+                      [p : Tm(Eq(U, π(a, x. b{x}), U, π(a', x'. b'{x'})))]
+                      ()
+                      : Tm(Eq(U, a', U, a))
+
+destructor EqUUππ_e2  (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
+                       a' : Tm(U), b'{x' : Tm(El(a'))} : Tm(U))
+                      [p : Tm(Eq(U, π(a, x. b{x}), U, π(a', x'. b'{x'})))]
+                      (x' : Tm(El(a')), x : Tm(El(a)), e : Tm(Eq(U, a', U, a)))
+                      : Tm(Eq(U, b{x}, U, b'{x'}))
+
+constructor EqUUww_i (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
+                      a' : Tm(U), b'{x' : Tm(El(a'))} : Tm(U))
+                     (p1 : Tm(Eq(U, a', U, a)),
+                      p2 {x : Tm(El(a)), x' : Tm(El(a')), e : Tm(Eq(U, a, U, a'))}
+                       : Tm(Eq(U, b{x}, U, b'{x'})))
+                     : Tm(Eq(U, w(a, x. b{x}), U, w(a', x'. b'{x'})))
+
+destructor EqUUww_e1  (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
+                       a' : Tm(U), b'{x' : Tm(El(a'))} : Tm(U))
+                      [p : Tm(Eq(U, w(a, x. b{x}), U, w(a', x'. b'{x'})))]
+                      ()
+                      : Tm(Eq(U, a, U, a'))
+
+destructor EqUUww_e2  (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
+                       a' : Tm(U), b'{x' : Tm(El(a'))} : Tm(U))
+                      [p : Tm(Eq(U, w(a, x. b{x}), U, w(a', x'. b'{x'})))]
+                      (x : Tm(El(a)), x' : Tm(El(a')), e : Tm(Eq(U, a, U, a')))
+                      : Tm(Eq(U, b{x}, U, b'{x'}))
+
+destructor cast () [a : Tm(U)] (b : Tm(U), e : Tm(Eq(U, a, U, b)), t : Tm(El(a))) : Tm(El(b))
+
+equation cast(π(a, x. b{x}), π(a', x'. b'{x'}), e, t)
+    -->  λ(x'.
+            let e1 := EqUUππ_e1(e) in
+            let x  := cast(a', a, e1, x') in
+            cast(b{x}, b'{x'}, EqUUππ_e2(x, x', e1), ﹫(t, x)))
+
+equation cast(w(a, x. b{x}), w(a', x'. b'{x'}), e, sup(t, u))
+    --> let e1 := EqUUww_e1(e) in
+        let t' := cast(a, a', e1, t) in
+        sup(t', x'.
+            let x := cast(b'{t'}, b{t}, EqUUww_e2(t, t', e1), x') in
+            cast(w(a, x.b{x}), w(a', x'. b'{x'}), e, ﹫(u, x)))
+
+equation cast(c𝔹, c𝔹, e, t) --> t
+equation cast(c⋆, c⋆, e, t) --> t
+equation cast(c∅, c∅, e, t) --> t
+
+let cong (A : Ty, x : Tm(A), y : Tm(A), e : Tm(Eq(A, x, A, y)),
+          B{x : Tm(A)} : Ty, f{x:Tm(A)} : Tm(B{x}))
+          : Tm(Eq(B{x}, f{x}, B{y}, f{y}))
+    := EqΠΠ_e([Tm(Eq(Π(A, x.B{x}), λ(x.f{x}), Π(A, x.B{x}), λ(x.f{x})))]
+              refl, x, y, e)

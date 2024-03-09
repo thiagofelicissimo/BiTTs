@@ -33,7 +33,10 @@ and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
 let rec eval_tm (t : tm) (meta_offset : int) (v_msubst : v_msubst) (v_subst : v_subst) : v_tm =
   match t with
   | Var(n) -> List.nth v_subst n
-  | Ascr(t, ty) -> eval_tm t meta_offset v_msubst v_subst
+  | Ascr(t, _) -> eval_tm t meta_offset v_msubst v_subst
+  | Let(t, u) ->
+    let v_t = eval_tm t meta_offset v_msubst v_subst in
+    eval_tm u meta_offset v_msubst (v_t :: v_subst)
   | Meta(n, subst) ->
     begin match List.nth_opt v_msubst n with
     | Some Value(v) -> v

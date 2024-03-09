@@ -8,6 +8,7 @@ type tm =
   | NotApplied of string (* either a variable or a meta/const with no args *)
   | Meta of string * subst (* invariant: subst <> [] *)
   | Symb of string * msubst
+  | Let of string * tm * tm
   | Ascr of tm * tm
 
 and subst = tm list
@@ -40,7 +41,7 @@ let get_db name scope =
     | _ :: scope -> get_db' scope name (k + 1) in
   get_db' scope name 0
 
-exception Name_not_in_scope
+exception Name_not_in_scope of string
 exception Dest_not_applied
 exception Dest_binds_first_arg
 
@@ -50,6 +51,8 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
   (* in the following, we consider that the variable scope shadows the
      metavariable scope, which shadows the signature *)
   match t with
+  | Let(name, t, u) ->
+    T.Let(scope_tm t mscope scope, scope_tm u mscope (name :: scope))
   | Ascr(t, ty) ->
     let t' = scope_tm t mscope scope in
     let ty' = scope_tm ty mscope scope in
@@ -64,10 +67,10 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
       | None ->
         if (T.DefTbl.find_opt name !T.defs) <> None
         then T.Def(name, [])
-        else raise Name_not_in_scope end end
+        else raise (Name_not_in_scope name) end end
   | Meta(name, subst) ->
     begin match get_db name mscope with
-    | None -> raise Name_not_in_scope
+    | None -> raise (Name_not_in_scope name)
     | Some i -> T.Meta(i, scope_subst subst mscope scope) end
   | Symb(name, msubst) ->
     begin match T.RuleTbl.find_opt name !T.schem_rules with
@@ -76,7 +79,7 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
     | None ->
       if (T.DefTbl.find_opt name !T.defs) <> None
         then T.Def(name, scope_msubst msubst mscope scope)
-        else raise Name_not_in_scope
+        else raise (Name_not_in_scope name)
   end
 
 and scope_subst (subst : subst) (mscope : string list) (scope : string list) : T.subst =
@@ -162,6 +165,8 @@ let rec pp_scope fmt scope =
 let rec pp_term fmt t =
   match t with
   | NotApplied(name) -> fprintf fmt "%s" name
+  | Let(name, t, u) ->
+    fprintf fmt "let %s := %a in %a" name pp_term t pp_term u
   | Meta(name, subst) -> fprintf fmt "%s{%a}" name pp_subst subst
   | Symb(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
   | Ascr(t, ty) -> fprintf fmt "[%a] %a" pp_term t pp_term ty
