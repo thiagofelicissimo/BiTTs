@@ -169,7 +169,7 @@ let rec pp_term fmt t =
     fprintf fmt "let %s := %a in %a" name pp_term t pp_term u
   | Meta(name, subst) -> fprintf fmt "%s{%a}" name pp_subst subst
   | Symb(name, msubst) -> fprintf fmt "%s(%a)" name pp_msubst msubst
-  | Ascr(t, ty) -> fprintf fmt "[%a] %a" pp_term t pp_term ty
+  | Ascr(t, ty) -> fprintf fmt "[%a] %a" pp_term ty pp_term t
 
 and pp_subst fmt subst =
   pp_print_list ~pp_sep:T.separator pp_term fmt (List.rev subst)

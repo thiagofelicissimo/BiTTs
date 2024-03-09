@@ -116,11 +116,17 @@ destructor EqΠΠ_e (A : Ty,  B{x : Tm(A)} : Ty,   f : Tm(Π(A, x.B{x})),
 
 constructor EqWW_i (A : Ty,  B {x : Tm(A )} : Ty, a  : Tm(A ), f  : Tm(Π(B {a }, _. W(A,  x .B {x }))),
                     A' : Ty, B'{x : Tm(A')} : Ty, a' : Tm(A'), f' : Tm(Π(B'{a'}, _. W(A', x'.B'{x'}))))
-                   (p {x : Tm(B{a}), x' : Tm(B'{a'}), e : Tm(Eq(B{a}, x, B'{a'}, x'))}
+                   (p1 : Tm(Eq(A, a, A', a')),
+                    p {x : Tm(B{a}), x' : Tm(B'{a'}), e : Tm(Eq(B{a}, x, B'{a'}, x'))}
                     : Tm(Eq(W(A, x.B{x}), ﹫(f, x), W(A', x'.B'{x'}), ﹫(f', x'))))
                    : Tm(Eq(W(A, x.B{x}), sup(a, f), W(A', x'.B'{x'}), sup(a', f')))
 
-destructor EqWW_e (A : Ty,  B {x : Tm(A )} : Ty, a  : Tm(A ), f  : Tm(Π(B {a }, _. W(A,  x .B {x }))),
+destructor EqWW_e1 (A : Ty,  B {x : Tm(A )} : Ty, a  : Tm(A ), f  : Tm(Π(B {a }, _. W(A,  x .B {x }))),
+                   A' : Ty, B'{x : Tm(A')} : Ty, a' : Tm(A'), f' : Tm(Π(B'{a'}, _. W(A', x'.B'{x'}))))
+                  [p : Tm(Eq(W(A, x.B{x}), sup(a, f), W(A', x'.B'{x'}), sup(a', f')))] ()
+                  : Tm(Eq(A, a, A', a'))
+
+destructor EqWW_e2 (A : Ty,  B {x : Tm(A )} : Ty, a  : Tm(A ), f  : Tm(Π(B {a }, _. W(A,  x .B {x }))),
                    A' : Ty, B'{x : Tm(A')} : Ty, a' : Tm(A'), f' : Tm(Π(B'{a'}, _. W(A', x'.B'{x'}))))
                   [p : Tm(Eq(W(A, x.B{x}), sup(a, f), W(A', x'.B'{x'}), sup(a', f')))]
                   (x : Tm(B{a}), x' : Tm(B'{a'}), e : Tm(Eq(B{a}, x, B'{a'}, x')))
@@ -164,7 +170,14 @@ destructor EqUUww_e2  (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
                       (x : Tm(El(a)), x' : Tm(El(a')), e : Tm(Eq(U, a, U, a')))
                       : Tm(Eq(U, b{x}, U, b'{x'}))
 
+(* ... *)
+(* I'm omitting some constructors/destructors for equality because there are many
+    and in the following we will not need all of them *)
+
 destructor cast () [a : Tm(U)] (b : Tm(U), e : Tm(Eq(U, a, U, b)), t : Tm(El(a))) : Tm(El(b))
+
+destructor castEq (a : Tm(U), b : Tm(U)) [e : Tm(Eq(U, a, U, b))] (t : Tm(El(a)))
+        : Tm(Eq(El(a), t, El(b), cast(a, b, e, t)))
 
 equation cast(π(a, x. b{x}), π(a', x'. b'{x'}), e, t)
     -->  λ(x'.
@@ -183,8 +196,83 @@ equation cast(c𝔹, c𝔹, e, t) --> t
 equation cast(c⋆, c⋆, e, t) --> t
 equation cast(c∅, c∅, e, t) --> t
 
+(* === END OF DEF OF THE THEORY === *)
+
+(* from now on we only define things in the theory *)
+
+(* we can derive congruence *)
 let cong (A : Ty, x : Tm(A), y : Tm(A), e : Tm(Eq(A, x, A, y)),
           B{x : Tm(A)} : Ty, f{x:Tm(A)} : Tm(B{x}))
           : Tm(Eq(B{x}, f{x}, B{y}, f{y}))
     := EqΠΠ_e([Tm(Eq(Π(A, x.B{x}), λ(x.f{x}), Π(A, x.B{x}), λ(x.f{x})))]
               refl, x, y, e)
+
+(* we can derive substitution for small types *)
+let subst (A : Ty, x : Tm(A), y : Tm(A), p : Tm(Eq(A, x, A, y)),
+           b{x : Tm(A)} : Tm(U), z : Tm(El(b{x})))
+        : Tm(El(b{y}))
+    := cast(b{x}, b{y}, cong(A, x, y, p, _. U, x. b{x}), z)
+
+(* we can derive functional extensionality for functions of small types *)
+let funext (a : Tm(U), b{x:Tm(El(a))} : Tm(U),
+            f : Tm(Π(El(a), x. El(b{x}))), f' : Tm(Π(El(a), x. El(b{x}))),
+            p {x : Tm(El(a))} : Tm(Eq(El(b{x}), ﹫(f, x), El(b{x}), ﹫(f', x))))
+            : Tm(Eq(Π(El(a), x. El(b{x})), f, Π(El(a), x. El(b{x})), f'))
+    := EqΠΠ_i(x x' e.
+                let p : Tm(Eq(Π(El(a), x. El(b{x})), f', Π(El(a), x. El(b{x})), f')) := refl in
+                let e' := EqΠΠ_e(p, x, x', e) in
+                trans(El(b{x}), ﹫(f', x), p{x}, e'))
+
+let tr (b : Tm(𝔹)) : Tm(U) := if(b, _. U, c⋆, c∅)
+
+let cℕ : Tm(U) := w(c𝔹, b. tr(b))
+let ℕ : Ty := El(cℕ)
+
+let 0 : Tm(ℕ) := sup(false, λ(x. ∅ind(x)))
+let S (n : Tm(ℕ)) : Tm(ℕ) := sup(true, λ(_. n))
+
+let ⋆irrel (x : Tm(⋆)) : Tm(Eq(⋆, I, ⋆, x)) := ⋆ind(x, y. Eq(⋆, I, ⋆, y), refl)
+
+let ℕind (n : Tm(ℕ), P{n : Tm(ℕ)} : Tm(U), p0 : Tm(El(P{0})),
+          ps{n : Tm(ℕ), e : Tm(El(P{n}))} : Tm(El(P{S(n)})))
+        : Tm(El(P{n}))
+    :=
+    let motive : Tm(Π(𝔹, _. U)) :=
+        λ(b. π(π(tr(b), _. cℕ), f.
+               π(π(tr(b), n. P{﹫(f, n)}), _. P{sup(b, f)})))
+    in
+    let b1 : Tm(El(﹫(motive, true))) :=
+        λ(f. λ(frec.
+        let m := ﹫(f, I) in
+        let Sm' : Tm(ℕ) := sup(true, f) in
+        let e : Tm(Eq(ℕ, S(m), ℕ, Sm')) :=
+            EqWW_i(refl, _ x' _. cong(⋆, I, x', ⋆irrel(x'), _. ℕ, x. ﹫(f, x))) in
+        let p' := ps{m, ﹫(frec, I)} in
+        cast(P{S(m)}, P{Sm'}, cong(ℕ, S(m), Sm', e, _. U, x. P{x}), p')))
+    in
+    let b2 : Tm(El(﹫(motive, false))) :=
+        λ(f. λ(_.
+        let 0' : Tm(ℕ) := sup(false, f) in
+        let e : Tm(Eq(ℕ, 0, ℕ, 0')) :=
+            EqWW_i(refl, x _ _. ∅ind(x)) in
+        cast(P{0}, P{0'}, cong(ℕ, 0, 0', e, _. U, x. P{x}), p0)))
+    in
+    Wind(n, x. El(P{x}), b f frec.
+        let M := if(b, x. El(﹫(motive, x)), b1, b2) in
+        ﹫(﹫(M, f), frec))
+
+(* large elimination *)
+let ℕindU (n : Tm(ℕ), p0 : Tm(U), ps{n : Tm(ℕ), e : Tm(U)} : Tm(U))
+        : Tm(U)
+    :=
+    Wind(n, _. U, b f frec.
+        let M := if(b, x. Π(Π(El(tr(x)), _. ℕ), _. Π(Π(El(tr(x)), _. U), _. U)),
+                      λ(f. λ(frec. ps{﹫(f, I), ﹫(frec, I)})),
+                      λ(_. λ(_. p0))) in
+        ﹫(﹫(M, f), frec))
+
+let 0≢Sn (n : Tm(ℕ), p : Tm(Eq(ℕ, 0, ℕ, S(n)))) : Tm(∅)
+    := let c∅≡c⋆ := cong(ℕ, 0, S(n), p, _.U, n. ℕindU(n, c⋆, _ _. c∅)) in
+    cast([Tm(U)] c⋆, c∅, c∅≡c⋆, I)
+
+(* constructor TODO (A : Ty) () : Tm(A) *)
