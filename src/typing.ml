@@ -133,6 +133,10 @@ and check_sort (mctx : mctx) (v_ctx : v_ctx) (v_subst : v_subst) (t : tm) =
   | Const(c, msubst) ->
     let mctx' = get_srule (RuleTbl.find c !schem_rules) in
     ignore @@ check_msubst mctx v_ctx v_subst [] msubst mctx'
+  | Let(t, sort) ->
+    let t_ty = infer mctx v_ctx v_subst t in
+    let t_v = eval_tm t 0 [] v_subst in
+    check_sort mctx (t_ty :: v_ctx) (t_v :: v_subst) sort
   | _ -> raise Not_a_sort
 
 

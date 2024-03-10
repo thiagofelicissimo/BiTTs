@@ -1,0 +1,294 @@
+
+(* Homogeneous OTT with a type-in-type Coquand-style universe *)
+
+(* Judgment forms *)
+sort Ty ()
+sort Tm (A : Ty)
+
+(* type-in-type Coquand-style universe *)
+constructor U () () : Ty
+constructor c () (A : Ty) : Tm(U)
+destructor El () [a : Tm(U)] () : Ty
+equation El(c(A)) --> A
+
+
+(* Dependent products *)
+constructor Π   ()
+                (A : Ty, B{x : Tm(A)} : Ty)
+                : Ty
+
+constructor λ   (A : Ty, B{x : Tm(A)} : Ty)
+                (t{x : Tm(A)} : Tm(B{x}))
+                : Tm(Π(A, x. B{x}))
+
+destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
+                [t : Tm(Π(A, x. B{x}))]
+                (u : Tm(A))
+                : Tm(B{u})
+
+equation ﹫(λ(x. t{x}), u) --> t{u}
+
+(* W Types *)
+constructor W () (A : Ty, B{x : Tm(A)} : Ty) : Ty
+constructor sup (A : Ty, B{x : Tm(A)} : Ty)
+                (a : Tm(A), f : Tm(Π(B{a}, _. W(A, x.B{x}))))
+                : Tm(W(A, x.B{x}))
+
+destructor Wind     (A : Ty, B{x : Tm(A)} : Ty)
+                    [t : Tm(W(A, x.B{x}))]
+                    (P{x : Tm(W(A, x.B{x}))} : Ty,
+                     p{x : Tm(A),
+                       y : Tm(Π(B{x}, _. W(A, x.B{x}))),
+                       z : Tm(Π(B{x}, x'. P{﹫(y, x')}))} : Tm(P{sup(x, y)}) )
+                       : Tm(P{t})
+
+
+equation Wind(sup(a, f), x. P{x}, x y z. p{x, y, z}) -->
+         p{a, f, λ(x. Wind(﹫(f, x), x. P{x}, x y z. p{x, y, z}))}
+
+(* empty type *)
+constructor ∅ () () : Ty
+(* we add ∅ind as a constructor,
+   allowing us to omit P *)
+constructor ∅ind (P : Ty) (x : Tm(∅)) : Tm(P)
+
+(* singleton type *)
+constructor ⋆ () () : Ty
+constructor I () () : Tm(⋆)
+
+destructor ⋆ind () [x : Tm(⋆)]
+                (P {x : Tm(⋆)} : Ty,
+                 p : Tm(P{I}))
+                : Tm(P{x})
+equation ⋆ind(I, x. P{x}, p) --> p
+
+(* booleans *)
+constructor 𝔹 () () : Ty
+constructor true () () : Tm(𝔹)
+constructor false () () : Tm(𝔹)
+
+destructor if () [x : Tm(𝔹)]
+                 (P{x : Tm(𝔹)} : Ty,
+                  a : Tm(P{true}),
+                  b : Tm(P{false})) : Tm(P{x})
+equation if(true, x.P{x}, a, b) --> a
+equation if(false, x.P{x}, a, b) --> b
+
+
+(* homogeneous observational equality *)
+(* because we have a universe, we will not need type equality,
+   only term equality *)
+
+constructor Eq () (A : Ty, a : Tm(A), b : Tm(A)) : Ty
+
+constructor refl (A : Ty, a : Tm(A)) ()
+                 (a / b : Tm(A)) : Tm(Eq(A, a, b))
+
+destructor cast () [A : Ty] (B : Ty, e : Tm(Eq(U, c(A), c(B))), t : Tm(A)) : Tm(B)
+
+(* when defining observational equality in a homogeneous way,
+   we need to add the following as an axiom *)
+destructor R (A : Ty, x : Tm(A), x' : Tm(A)) [e : Tm(Eq(A, x, x'))]
+              (P {x : Tm(A)} : Ty) : Tm(Eq(U, c(P{x}), c(P{x'})))
+
+(* we can now derive substitution *)
+let subst (A : Ty, x : Tm(A), y : Tm(A), p : Tm(Eq(A, x, y)),
+           P{x : Tm(A)} : Ty, z : Tm(P{x}))
+        : Tm(P{y})
+    := cast(P{x}, P{y}, R(p, x. P{x}), z)
+
+(* I think we also could derive dependent subst (J) by postulating
+   irrelevance of equality, but we will not need this here *)
+
+(* Pujet and Tabareau instead consider a theory with primitive subst
+   for propositions, which then allow us to derive R.
+   the reason we prefer to have R as primitive is because we do not
+   have a distinguished sort for propositions, so we cannot just
+   add subst for types as an axiom without breaking canonicity *)
+
+
+(* we can derive sym and trans *)
+
+let sym' (A : Ty, x : Tm(A), y : Tm(A), p : Tm(Eq(A, x, y)))
+    : Tm(Eq(A, y, x))
+    := subst(A, x, y, p, z. Eq(A, z, x), refl)
+
+let trans' (A : Ty, x : Tm(A), y : Tm(A), z : Tm(A),
+            p : Tm(Eq(A, x, y)), q : Tm(Eq(A, y, z)))
+            : Tm(Eq(A, x, z))
+    := subst(A, y, z, q, x'. Eq(A, x, x'), p)
+
+(* now we now sym and trans are justified by the theory, we add
+   them as constructor, allowing us to omit some of the arguments.
+   note that they then become opaque, but this is not a problem,
+   since in observational type theory one does not compute equality proofs *)
+
+constructor sym (A : Ty, x : Tm(A), y : Tm(A))
+                (p : Tm(Eq(A, y, x)))
+                : Tm(Eq(A, x, y))
+
+constructor trans (A : Ty, x : Tm(A), z : Tm(A))
+                  (y : Tm(A), p : Tm(Eq(A, x, y)), q : Tm(Eq(A, y, z)))
+                : Tm(Eq(A, x, z))
+
+
+(* some of the axioms defining the observational equality *)
+
+constructor EqΠ_i  (A : Ty,  B{x : Tm(A)} : Ty,   f : Tm(Π(A, x.B{x})), f' : Tm(Π(A, x.B{x})))
+                   (p {x : Tm(A)} : Tm(Eq(B{x}, ﹫(f, x), ﹫(f', x))))
+                   : Tm(Eq(Π(A, x.B{x}), f, f'))
+
+destructor EqΠ_e  (A : Ty,  B{x : Tm(A)} : Ty,   f : Tm(Π(A, x.B{x})), f' : Tm(Π(A, x.B{x})))
+                  [p : Tm(Eq(Π(A, x.B{x}), f, f'))] (x : Tm(A))
+                  : Tm(Eq(B{x}, ﹫(f, x), ﹫(f', x)))
+
+constructor EqW_i (A : Ty,  B {x : Tm(A )} : Ty,
+                   a  : Tm(A), f  : Tm(Π(B {a }, _. W(A, x.B{x}))),
+                   a' : Tm(A), f' : Tm(Π(B {a'}, _. W(A, x.B{x}))))
+                   (p1 : Tm(Eq(A, a, a')),
+                    p2 {x : Tm(B{a})} :
+                      let e := R(p1, x.B{x}) in
+                      let x' := cast(B{a}, B{a'}, e, x) in
+                      Tm(Eq(W(A, x.B{x}), ﹫(f, x), ﹫(f', x'))))
+                   : Tm(Eq(W(A, x.B{x}), sup(a, f), sup(a', f')))
+
+destructor EqW_e1 (A : Ty,  B{x : Tm(A)} : Ty,
+                   a  : Tm(A), f  : Tm(Π(B {a }, _. W(A, x.B{x}))),
+                   a' : Tm(A), f' : Tm(Π(B {a'}, _. W(A, x.B{x}))))
+                   [p : Tm(Eq(W(A, x.B{x}), sup(a, f), sup(a', f')))]
+                   () : Tm(Eq(A, a, a'))
+
+destructor EqW_e2 (A : Ty,  B{x : Tm(A)} : Ty,
+                   a  : Tm(A), f  : Tm(Π(B {a }, _. W(A, x.B{x}))),
+                   a' : Tm(A), f' : Tm(Π(B {a'}, _. W(A, x.B{x}))))
+                   [p : Tm(Eq(W(A, x.B{x}), sup(a, f), sup(a', f')))]
+                   (x : Tm(B{a}))
+                   : let e := R(EqW_e1(p), x.B{x}) in
+                     let x' := cast(B{a}, B{a'}, e, x) in
+                     Tm(Eq(W(A, x.B{x}), ﹫(f, x), ﹫(f', x')))
+
+
+constructor EqUΠΠ_i (A  : Ty, B {x  : Tm(A )} : Ty,
+                     A' : Ty, B'{x' : Tm(A')} : Ty)
+                    (p1 : Tm(Eq(U, c(A), c(A'))),
+                     p2 {x' : Tm(A')} :
+                        let x := cast(A', A, sym(p1), x') in
+                        Tm(Eq(U, c(B{x}), c(B'{x'}))))
+                    : Tm(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))
+
+
+destructor EqUΠΠ_e1  (A  : Ty, B {x  : Tm(A )} : Ty,
+                      A' : Ty, B'{x' : Tm(A')} : Ty)
+                     [p : Tm(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))] ()
+                    : Tm(Eq(U, c(A), c(A')))
+
+destructor EqUΠΠ_e2  (A  : Ty, B {x  : Tm(A )} : Ty,
+                      A' : Ty, B'{x' : Tm(A')} : Ty)
+                     [p : Tm(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))]
+                     (x' : Tm(A'))
+                    : let x := cast(A', A, sym(EqUΠΠ_e1(p)), x') in
+                      Tm(Eq(U, c(B{x}), c(B'{x'})))
+
+constructor EqUWW_i (A  : Ty, B {x  : Tm(A )} : Ty,
+                     A' : Ty, B'{x' : Tm(A')} : Ty)
+                    (p1 : Tm(Eq(U, c(A), c(A'))),
+                     p2 {x : Tm(A)} :
+                        let x' := cast(A, A', p1, x) in
+                        Tm(Eq(U, c(B'{x'}), c(B{x}))))
+                    : Tm(Eq(U, c(W(A, x.B{x})), c(W(A', x'.B'{x'}))))
+
+
+destructor EqUWW_e1  (A  : Ty, B {x  : Tm(A )} : Ty,
+                      A' : Ty, B'{x' : Tm(A')} : Ty)
+                     [p : Tm(Eq(U, c(W(A, x.B{x})), c(W(A', x'.B'{x'}))))] ()
+                    : Tm(Eq(U, c(A), c(A')))
+
+destructor EqUWW_e2  (A  : Ty, B {x  : Tm(A )} : Ty,
+                      A' : Ty, B'{x' : Tm(A')} : Ty)
+                     [p : Tm(Eq(U, c(W(A, x.B{x})), c(W(A', x'.B'{x'}))))]
+                     (x : Tm(A))
+                    : let x' := cast(A, A', EqUWW_e1(p), x) in
+                      Tm(Eq(U, c(B'{x'}), c(B{x})))
+
+(* ... *)
+(* I'm omitting some constructors/destructors for equality because there are many
+    and in the following we will not need all of them *)
+
+
+equation cast(Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
+    -->  λ(x'.
+            let x := cast(A', A, sym(EqUΠΠ_e1(e)), x') in
+            cast(B{x}, B'{x'}, EqUΠΠ_e1(e, x'), ﹫(t, x)))
+
+equation cast(W(A, x. B{x}), W(A', x'. B'{x'}), e, sup(t, u))
+    --> let t' := cast(A, A', EqUWW_e1(e), t) in
+        sup(t', x'.
+            let x := cast(B'{t'}, B{t}, EqUWW_e2(e, t), x') in
+            cast(W(A, x.B{x}), W(A', x'. B'{x'}), e, ﹫(u, x)))
+
+equation cast(𝔹, 𝔹, e, t) --> t
+equation cast(⋆, ⋆, e, t) --> t
+equation cast(∅, ∅, e, t) --> t
+equation cast(U, U, e, t) --> t
+
+(* coherence of cast *)
+destructor castEq (A : Ty) [t : Tm(A)] (e : Tm(Eq(U, c(A), c(A))))
+        : Tm(Eq(A, t, cast(A, A, e, t)))
+
+(* === END OF DEF OF THE THEORY === *)
+
+(* from now on we only define things in the theory *)
+
+let cong' (A : Ty, x : Tm(A), y : Tm(A), e : Tm(Eq(A, x, y)),
+           P : Ty, p {x : Tm(A)} : Tm(P))
+          : Tm(Eq(P, p{x}, p{y}))
+    := subst(A, x, y, e, z. Eq(P, p{x}, p{z}), refl)
+
+(* once again, because we now know that cong is justified by
+   the theory, we can add it as a symbol, allowing us to omit some arguments *)
+destructor cong (A : Ty, x : Tm(A), y : Tm(A))
+                [e : Tm(Eq(A, x, y))]
+                (P : Ty, p {x : Tm(A)} : Tm(P))
+            : Tm(Eq(P, p{x}, p{y}))
+
+let Tr (b : Tm(𝔹)) : Ty := El(if(b, _. U, c(⋆), c(∅)))
+
+let ℕ : Ty := W(𝔹, b. Tr(b))
+
+let 0 : Tm(ℕ) := sup(false, λ(x. ∅ind(x)))
+let S (n : Tm(ℕ)) : Tm(ℕ) := sup(true, λ(_. n))
+
+let ⋆irrel (x : Tm(⋆)) : Tm(Eq(⋆, I, x)) := ⋆ind(x, y. Eq(⋆, I, y), refl)
+
+let ℕind (n : Tm(ℕ), P{n : Tm(ℕ)} : Ty, p0 : Tm(P{0}),
+          ps{n : Tm(ℕ), e : Tm(P{n})} : Tm(P{S(n)}))
+        : Tm(P{n})
+    :=
+    let motive : Tm(Π(𝔹, _. U)) :=
+        λ(b. c(Π(Π(Tr(b), _. ℕ), f.
+               Π(Π(Tr(b), n. P{﹫(f, n)}), _. P{sup(b, f)}))))
+    in
+    let b1 : Tm(El(﹫(motive, true))) :=
+        λ(f. λ(frec.
+        let m := ﹫(f, I) in
+        let Sm' : Tm(ℕ) := sup(true, f) in
+        let e : Tm(Eq(ℕ, S(m), Sm')) :=
+           EqW_i(refl, x'. cong(⋆irrel(x'), ℕ, x. ﹫(f, x))) in
+        let p' := ps{m, ﹫(frec, I)} in
+        cast(P{S(m)}, P{Sm'}, R(e, x.P{x}), p')))
+    in
+    let b2 : Tm(El(﹫(motive, false))) :=
+        λ(f. λ(_.
+        let 0' : Tm(ℕ) := sup(false, f) in
+        let e : Tm(Eq(ℕ, 0, 0')) :=
+            EqW_i(refl, x. ∅ind(x)) in
+        cast(P{0}, P{0'}, R(e, x. P{x}), p0)))
+    in
+    Wind(n, x. P{x}, b f frec.
+        let M := if(b, x. El(﹫(motive, x)), b1, b2) in
+        ﹫(﹫(M, f), frec))
+
+let 0≢Sn (n : Tm(ℕ), p : Tm(Eq(ℕ, 0, S(n)))) : Tm(∅)
+    := let c∅≡c⋆ := R(p, n. El(ℕind(n, _. U, c(⋆), _ _. c(∅)))) in
+    cast([Ty] ⋆, ∅, c∅≡c⋆, I)
+

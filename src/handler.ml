@@ -102,7 +102,7 @@ let handle_entry entry =
     let tm = C.scope_tm tm [] [] in
     let vtm = E.eval_tm tm 0 [] [] in
     let tm' = E.read_back_tm 0 vtm in
-    Format.printf "[%s %a] %a@." (darkblue "evaluate") T.pp_term tm T.pp_term tm'
+    Format.printf "[%s %a] %a@." (command "evaluate") T.pp_term tm T.pp_term tm'
 
   | Let(name, mctx, ty, tm) ->
 

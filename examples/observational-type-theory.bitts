@@ -1,5 +1,5 @@
 
-(* MLTT with a type-in-type Taski-style universe *)
+(* Heterogeneous OTT with a Taski-style universe *)
 
 (* Judgment forms *)
 sort Ty ()
@@ -88,12 +88,17 @@ constructor c𝔹 () () : Tm(U)
 equation El(c𝔹) --> 𝔹
 
 
-(* observational equality *)
+(* heterogeneous observational equality *)
+(* because we have a universe, we will not need type equality,
+   only term equality *)
 
 constructor Eq () (A : Ty, a : Tm(A), B : Ty, b : Tm(B)) : Ty
 
 constructor refl (A : Ty, a : Tm(A)) ()
                  (A / B : Ty, a / b : Tm(B)) : Tm(Eq(A, a, B, b))
+
+(* in our formulation, symmetry and transitivity will not be derivable,
+   so we have them in the definition of equality *)
 
 constructor sym (A : Ty, a : Tm(A), B : Ty, b : Tm(B))
                 (p : Tm(Eq(B, b, A, a))) : Tm(Eq(A, a, B, b))
@@ -101,6 +106,8 @@ constructor sym (A : Ty, a : Tm(A), B : Ty, b : Tm(B))
 constructor trans (A : Ty, a : Tm(A), C : Ty, c : Tm(C))
                   (B : Ty, b : Tm(B), p : Tm(Eq(A, a, B, b)), q : Tm(Eq(B, b, C, c)))
                   : Tm(Eq(A, a, C, c))
+
+(* some of the axioms defining the observational equality *)
 
 constructor EqΠΠ_i (A : Ty,  B{x : Tm(A)} : Ty,   f : Tm(Π(A, x.B{x})),
                     A' : Ty, B'{x : Tm(A')} : Ty, f' : Tm(Π(A', x.B'{x})))
@@ -176,9 +183,6 @@ destructor EqUUww_e2  (a  : Tm(U), b {x  : Tm(El(a ))} : Tm(U),
 
 destructor cast () [a : Tm(U)] (b : Tm(U), e : Tm(Eq(U, a, U, b)), t : Tm(El(a))) : Tm(El(b))
 
-destructor castEq (a : Tm(U), b : Tm(U)) [e : Tm(Eq(U, a, U, b))] (t : Tm(El(a)))
-        : Tm(Eq(El(a), t, El(b), cast(a, b, e, t)))
-
 equation cast(π(a, x. b{x}), π(a', x'. b'{x'}), e, t)
     -->  λ(x'.
             let e1 := EqUUππ_e1(e) in
@@ -196,6 +200,10 @@ equation cast(c𝔹, c𝔹, e, t) --> t
 equation cast(c⋆, c⋆, e, t) --> t
 equation cast(c∅, c∅, e, t) --> t
 
+(* coherence of cast *)
+destructor castEq (a : Tm(U), b : Tm(U)) [e : Tm(Eq(U, a, U, b))] (t : Tm(El(a)))
+        : Tm(Eq(El(a), t, El(b), cast(a, b, e, t)))
+
 (* === END OF DEF OF THE THEORY === *)
 
 (* from now on we only define things in the theory *)
@@ -206,6 +214,14 @@ let cong (A : Ty, x : Tm(A), y : Tm(A), e : Tm(Eq(A, x, A, y)),
           : Tm(Eq(B{x}, f{x}, B{y}, f{y}))
     := EqΠΠ_e([Tm(Eq(Π(A, x.B{x}), λ(x.f{x}), Π(A, x.B{x}), λ(x.f{x})))]
               refl, x, y, e)
+
+(* note that by taking a U-valued f in cong, we get a version of
+   the axiom "R" (from the original "Observational Equality, Now!"
+   paper) for small types. this is why we haven't added this axiom.
+   on the other hand, this is not enough to derive sym and trans,
+   given that equality is not small. this is why we have included
+   them as axioms. *)
+
 
 (* we can derive substitution for small types *)
 let subst (A : Ty, x : Tm(A), y : Tm(A), p : Tm(Eq(A, x, A, y)),
