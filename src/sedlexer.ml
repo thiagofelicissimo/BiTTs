@@ -15,6 +15,7 @@ let keyword_or_ident =
         "let", LET;
         "assert", ASSERT;
         "in", IN;
+        "skipcheck", SKIPCHECK;
         "evaluate", EVAL
     ] ;
   fun s ->

@@ -1,6 +1,7 @@
 
 (*  an extension of MLTT with funext and K with canonicity for natural numbers.
-    any MLTT program of type Nat using funext and K can be computed in this theory *)
+    any MLTT program of type Nat using funext and K can be computed in this theory
+    (except if it explores non-termination by using the fact that we have type in type) *)
 
 (*  following sec 3.2.11 of loic pujet's thesis we first define OTT with
     identity types. then we forget about the OTT layer. only the proofs of
@@ -9,48 +10,44 @@
     2- computing terms with variables, 3- computing terms of type Id *)
 
 
-sort Lvl ()
-constructor 0ₗ () () : Lvl
-constructor Sₗ () (_ : Lvl) : Lvl
+sort Ty ()
+sort Tm (A : Ty)
 
-sort Ty (l : Lvl)
-sort Tm (l : Lvl, A : Ty(l))
-
-
-(* Coquand-style Universes: Tm(U(l)) ≃ Ty(l) *)
-constructor U (l : Lvl) () : Ty(Sₗ(l))
-constructor c (l : Lvl) (A : Ty(l)) : Tm(Sₗ(l), U)
-destructor El (l : Lvl) [t : Tm(Sₗ(l), U)] () : Ty(l)
+(* type-in-type Coquand-style universe *)
+constructor U () () : Ty
+constructor c () (A : Ty) : Tm(U)
+destructor El () [a : Tm(U)] () : Ty
 equation El(c(A)) --> A
 
 
-(* Cumulativity: Tm(Sₗ(l), ↑(A)) ≃ Tm(l, A) *)
-constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(Sₗ(l))
-constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(Sₗ(l), ↑(A))
-destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(Sₗ(l), ↑(A))] () : Tm(l, A)
-equation unbox(box(t)) --> t
-
 (* Dependent products *)
-constructor Π (l : Lvl) (A : Ty(l), B {x : Tm(l, A)} : Ty(l)) : Ty(l)
-constructor λ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) (t{x : Tm(l, A)} : Tm(l, B{x}))
-        : Tm(l, Π(A, x. B{x}))
-destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) [t : Tm (l, Π(A, x. B{x}))] (u : Tm(l, A))
-        : Tm(l, B{u})
+constructor Π   ()
+                (A : Ty, B{x : Tm(A)} : Ty)
+                : Ty
+
+constructor λ   (A : Ty, B{x : Tm(A)} : Ty)
+                (t{x : Tm(A)} : Tm(B{x}))
+                : Tm(Π(A, x. B{x}))
+
+destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
+                [t : Tm(Π(A, x. B{x}))]
+                (u : Tm(A))
+                : Tm(B{u})
 
 equation ﹫(λ(x. t{x}), u) --> t{u}
 
 (* Natural numbers *)
-constructor ℕ (i : Lvl) () : Ty(i)
-constructor 0 (i : Lvl) () : Tm(i, ℕ)
-constructor S (i : Lvl) (n : Tm(i, ℕ)) : Tm(i, ℕ)
+constructor ℕ () () : Ty
+constructor 0 () () : Tm(ℕ)
+constructor S () (n : Tm(ℕ)) : Tm(ℕ)
 
-destructor ℕ_ind    (i : Lvl)
-                    [n : Tm(i, ℕ)]
-                    (P {x : Tm(i, ℕ)} : Ty(i),
-                     p0 : Tm(i, P{0}),
-                     ps {n : Tm(i, ℕ), pn : Tm(i, P{n})} : Tm(i, P{S(n)}))
+destructor ℕ_ind    ()
+                    [n : Tm(ℕ)]
+                    (P {x : Tm(ℕ)} : Ty,
+                     p0 : Tm(P{0}),
+                     ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}))
                 (* ------------ *)
-                    : Tm(i, P{n})
+                    : Tm(P{n})
 
 equation ℕ_ind(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
 equation ℕ_ind(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
@@ -58,41 +55,43 @@ equation ℕ_ind(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
 
 
 (* empty type *)
-constructor ∅ (i : Lvl) () : Ty(i)
+constructor ∅ () () : Ty
 (* we add ∅ind as a constructor, allowing us to omit P *)
-constructor ∅ind (i : Lvl, P : Ty(i)) (x : Tm(i, ∅)) : Tm(i, P)
+constructor ∅ind (P : Ty) (x : Tm(∅)) : Tm(P)
 
 
 (* id types (aka inductive equality) *)
-constructor Id (i : Lvl) (A : Ty(i), x : Tm(i, A), y : Tm(i, A)) : Ty(i)
-constructor refl (i : Lvl, A : Ty(i), x : Tm(i, A)) () (x / y : Tm(i, A)) : Tm(i, Id(A, x, y))
+constructor Id () (A : Ty, x : Tm(A), y : Tm(A)) : Ty
+constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Tm(Id(A, x, y))
 
 (* we cannot omit any of the arguments, because they will be computationally
    relevant: later we will add another rewrite rule for J which will need
    them to compute *)
-destructor  J   () [i : Lvl]
-                (A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-                 e : Tm(i, Id(A, x, y)),
-                 P {x' : Tm(i, A), e : Tm(i, Id(A, x, x'))} : Ty(i),
-                 p : Tm(i, P{x, refl}))
-            : Tm(i, P{y, e})
+destructor  J   () [A : Ty]
+                (x : Tm(A), y : Tm(A),
+                 e : Tm(Id(A, x, y)),
+                 P {x' : Tm(A), e : Tm(Id(A, x, x'))} : Ty,
+                 p : Tm(P{x, refl}))
+            : Tm(P{y, e})
 
 (* a consequence of this is that we need to linearize the following rule.
    therefore, the lhs is not well-typed and so this rule is technically
    not well-typed in our sense. nevertheless, it preserves typing because
    for each well-typed instance of the lhs we will have x and x' convertible.
-   therefore, it is still safe to add it *)
-(* equation J(i, A, x, x', refl, x e.P{x, e}, p) --> p *)
+   therefore, it is still safe to add it. the skipcheck keyword allows us
+   to then skip the subject reduction check *)
+equation skipcheck
+    J(A, x, x', refl, x e.P{x, e}, p) --> p
 
-let congId (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-            e : Tm(i, Id(A, x, y)), P : Ty(i), p {x : Tm(i, A)} : Tm(i, P))
-        : Tm(i, Id(P, p{x}, p{y}))
-    := J(i, A, x, y, e, x' _. Id(P, p{x}, p{x'}), refl)
+let congId (A : Ty, x : Tm(A), y : Tm(A),
+            e : Tm(Id(A, x, y)), P : Ty, p {x : Tm(A)} : Tm(P))
+        : Tm(Id(P, p{x}, p{y}))
+    := J(A, x, y, e, x' _. Id(P, p{x}, p{x'}), refl)
 
-let transId (i : Lvl, A : Ty(i), x : Tm(i,A), y : Tm(i,A),
-             z : Tm(i, A), p : Tm(i, Id(A, x, y)), q : Tm(i, Id(A, y, z)))
-        : Tm(i, Id(A, x, z))
-    := J(i, A, y, z, q, x' _. Id(A, x, x'), p)
+let transId (A : Ty, x : Tm(A), y : Tm(A),
+             z : Tm(A), p : Tm(Id(A, x, y)), q : Tm(Id(A, y, z)))
+        : Tm(Id(A, x, z))
+    := J(A, y, z, q, x' _. Id(A, x, x'), p)
 
 (* ===================================== *)
 (* --- BEGINNING OF THE PRIVATE PART --- *)
@@ -102,168 +101,185 @@ sort Prop ()
 sort Prf (P : Prop)
 
 (* heterogeneous observational equality *)
-constructor Eq () (i : Lvl, A : Ty(i), a : Tm(i, A), b : Tm(i, A)) : Prop
+constructor Eq () (A : Ty, a : Tm(A), b : Tm(A)) : Prop
 
-constructor mk (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A))
-               (p : Prf(Eq(i, A, x, y)))
-            : Tm(i, Id(A, x, y))
+constructor mk (A : Ty, x : Tm(A), y : Tm(A))
+               (p : Prf(Eq(A, x, y)))
+            : Tm(Id(A, x, y))
 
-constructor unmk (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A))
-               (p : Tm(i, Id(A, x, y)))
-            : Prf(Eq(i, A, x, y))
+constructor unmk (A : Ty, x : Tm(A), y : Tm(A))
+               (p : Tm(Id(A, x, y)))
+            : Prf(Eq(A, x, y))
 
-constructor refleq (i : Lvl, A : Ty(i), a : Tm(i, A)) ()
-                 (a / b : Tm(i, A)) : Prf(Eq(i, A, a, b))
+constructor refleq (A : Ty, a : Tm(A)) ()
+                 (a / b : Tm(A)) : Prf(Eq(A, a, b))
 
-destructor cast () [i : Lvl] (A : Ty(i), B : Ty(i), e : Prf(Eq(Sₗ(i), U, c(A), c(B))), t : Tm(i, A)) : Tm(i, B)
+destructor cast () [A : Ty] (B : Ty, e : Prf(Eq(U, c(A), c(B))), t : Tm(A)) : Tm(B)
 
-destructor subst (i : Lvl, A : Ty(i), x : Tm(i,A), y : Tm(i,A))
-                 [e : Prf(Eq(i, A, x, y))]
-                 (P {x' : Tm(i, A), e : Prf(Eq(i, A, x, x'))} : Prop,
+destructor subst (A : Ty, x : Tm(A), y : Tm(A))
+                 [e : Prf(Eq(A, x, y))]
+                 (P {x' : Tm(A), e : Prf(Eq(A, x, x'))} : Prop,
                   p : Prf(P{x, refleq}))
                 : Prf(P{y, e})
 
-constructor sym (i : Lvl, A : Ty(i), x : Tm(i,A), y : Tm(i,A)) (p : Prf(Eq(i, A, y, x)))
-    : Prf(Eq(i,A, x, y))
+constructor sym (A : Ty, x : Tm(A), y : Tm(A)) (p : Prf(Eq(A, y, x)))
+    : Prf(Eq(A, x, y))
 
-constructor trans (i : Lvl, A : Ty(i), x : Tm(i,A), z : Tm(i,A))
-                  (y : Tm(i, A), p : Prf(Eq(i, A, x, y)), p : Prf(Eq(i, A, y, z)))
-    : Prf(Eq(i,A, x, z))
+constructor trans (A : Ty, x : Tm(A), z : Tm(A))
+                  (y : Tm(A), p : Prf(Eq(A, x, y)), p : Prf(Eq(A, y, z)))
+    : Prf(Eq(A, x, z))
 
 (* some of the axioms defining the observational equality *)
 
-constructor EqΠ_i  (i : Lvl, A : Ty(i),  B{x : Tm(i, A)} : Ty(i),
-                    f : Tm(i,Π(A, x.B{x})), f' : Tm(i,Π(A, x.B{x})))
-                   (p {x : Tm(i,A)} : Prf(Eq(i,B{x}, ﹫(f, x), ﹫(f', x))))
-                   : Prf(Eq(i,Π(A, x.B{x}), f, f'))
+constructor EqΠ_i  (A : Ty,  B{x : Tm(A)} : Ty,
+                    f : Tm(Π(A, x.B{x})), f' : Tm(Π(A, x.B{x})))
+                   (p {x : Tm(A)} : Prf(Eq(B{x}, ﹫(f, x), ﹫(f', x))))
+                   : Prf(Eq(Π(A, x.B{x}), f, f'))
 
 
-constructor EqUΠΠ_i (i : Lvl, A  : Ty(i), B {x  : Tm(i, A)} : Ty(i),
-                     A' : Ty(i), B'{x' : Tm(i, A')} : Ty(i))
-                    (p1 : Prf(Eq(Sₗ(i), U, c(A), c(A'))),
-                     p2 {x' : Tm(i, A')} :
-                        let x := cast(i, A', A, sym(p1), x') in
-                        Prf(Eq(Sₗ(i), U, c(B{x}), c(B'{x'}))))
-                    : Prf(Eq(Sₗ(i), U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))
+constructor EqUΠΠ_i (A  : Ty, B {x  : Tm(A)} : Ty,
+                     A' : Ty, B'{x' : Tm( A')} : Ty)
+                    (p1 : Prf(Eq(U, c(A), c(A'))),
+                     p2 {x' : Tm( A')} :
+                        let x := cast(A', A, sym(p1), x') in
+                        Prf(Eq(U, c(B{x}), c(B'{x'}))))
+                    : Prf(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))
 
 
-destructor EqUΠΠ_e1  (i : Lvl, A  : Ty(i), B {x  : Tm(i, A)} : Ty(i),
-                      A' : Ty(i), B'{x' : Tm(i,A')} : Ty(i))
-                     [p : Prf(Eq(Sₗ(i), U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))] ()
-                    : Prf(Eq(Sₗ(i), U, c(A), c(A')))
+destructor EqUΠΠ_e1  (A  : Ty, B {x  : Tm(A)} : Ty,
+                      A' : Ty, B'{x' : Tm(A')} : Ty)
+                     [p : Prf(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))] ()
+                    : Prf(Eq(U, c(A), c(A')))
 
-destructor EqUΠΠ_e2  (i : Lvl, A  : Ty(i), B {x  : Tm(i, A)} : Ty(i),
-                      A' : Ty(i), B'{x' : Tm(i, A')} : Ty(i))
-                     [p : Prf(Eq(Sₗ(i), U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))]
-                     (x' : Tm(i, A'))
-                    : let x := cast(i, A', A, sym(EqUΠΠ_e1(p)), x') in
-                      Prf(Eq(Sₗ(i), U, c(B{x}), c(B'{x'})))
-
-
-destructor EqU↑↑_e   (i : Lvl, A  : Ty(i), A' : Ty(i))
-                     [p : Prf(Eq(Sₗ(Sₗ(i)), U, c(↑(A)), c(↑(A'))))]
-                     ()
-                    : Prf(Eq(Sₗ(i), U, c(A), c(A')))
+destructor EqUΠΠ_e2  (A  : Ty, B {x  : Tm(A)} : Ty,
+                      A' : Ty, B'{x' : Tm( A')} : Ty)
+                     [p : Prf(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'}))))]
+                     (x' : Tm(A'))
+                    : let x := cast(A', A, sym(EqUΠΠ_e1(p)), x') in
+                      Prf(Eq(U, c(B{x}), c(B'{x'})))
 
 
+constructor EqId_i (A : Ty, x : Tm(A), y : Tm(A),
+                    e : Tm(Id(A, x, y)), e' : Tm( Id(A, x, y)))
+                    () : Prf(Eq(Id(A, x, y), e, e'))
 
-constructor EqId_i (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-                    e : Tm(i, Id(A, x, y)), e' : Tm(i, Id(A, x, y)))
-                    () : Prf(Eq(i, Id(A, x, y), e, e'))
+destructor EqUIdId_e1 (A : Ty, x : Tm(A), y : Tm(A),
+                       A' : Ty, x' : Tm( A'), y' : Tm( A'))
+                      [e : Prf(Eq(U, c(Id(A, x, y)), c(Id(A', x', y'))))]
+                      () : Prf(Eq(U, c(A), c(A')))
 
-destructor EqUIdId_e1 (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-                       A' : Ty(i), x' : Tm(i, A'), y' : Tm(i, A'))
-                      [e : Prf(Eq(Sₗ(i), U, c(Id(A, x, y)), c(Id(A', x', y'))))]
-                      () : Prf(Eq(Sₗ(i), U, c(A), c(A')))
+destructor EqUIdId_e2 (A : Ty, x : Tm(A), y : Tm(A),
+                       A' : Ty, x' : Tm( A'), y' : Tm( A'))
+                      [e : Prf(Eq(U, c(Id(A, x, y)), c(Id(A', x', y'))))]
+                      () : Prf(Eq(A', cast(A, A', EqUIdId_e1(e), x), x'))
 
-destructor EqUIdId_e2 (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-                       A' : Ty(i), x' : Tm(i, A'), y' : Tm(i, A'))
-                      [e : Prf(Eq(Sₗ(i), U, c(Id(A, x, y)), c(Id(A', x', y'))))]
-                      () : Prf(Eq(i, A', cast(i, A, A', EqUIdId_e1(e), x), x'))
+destructor EqUIdId_e3 (A : Ty, x : Tm(A), y : Tm(A),
+                       A' : Ty, x' : Tm( A'), y' : Tm( A'))
+                      [e : Prf(Eq(U, c(Id(A, x, y)), c(Id(A', x', y'))))]
+                      () : Prf(Eq(A', cast(A, A', EqUIdId_e1(e), y), y'))
 
-destructor EqUIdId_e3 (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-                       A' : Ty(i), x' : Tm(i, A'), y' : Tm(i, A'))
-                      [e : Prf(Eq(Sₗ(i), U, c(Id(A, x, y)), c(Id(A', x', y'))))]
-                      () : Prf(Eq(i, A', cast(i, A, A', EqUIdId_e1(e), y), y'))
+constructor TODO (A:Ty) () : Tm(A)
 
+equation   (A : Ty, B{x : Tm(A)} : Ty, A' : Ty, B'{x' : Tm( A')} : Ty,
+            e : Prf(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'})))),
+            t : Tm( Π(A, x.B{x})))
 
-equation cast(i, Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
+    cast(Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
     -->  λ(x'.
-            let x := cast(i, A', A, sym(EqUΠΠ_e1(e)), x') in
-            cast(i, B{x}, B'{x'}, EqUΠΠ_e2(e, x'), ﹫(t, x)))
+            let x := cast(A', A, sym(EqUΠΠ_e1(e)), x') in
+            cast(B{x}, B'{x'}, EqUΠΠ_e2(e, x'), ﹫(t, x)))
 
-equation cast(i, ∅, ∅, e, t) --> t
-equation cast(Sₗ(i), U, U, e, t) --> t
-equation cast(i, ℕ, ℕ, e, t) --> t
-equation cast(Sₗ(i), ↑(A), ↑(A'), e, t) --> box(cast(i, A, A', EqU↑↑_e(e), unbox(t)))
+equation (e : Prf(Eq(U, c(∅), c(∅))), t : Tm( ∅))
+    cast(∅, ∅, e, t) --> t
 
-let rhs' (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-          A' : Ty(i), x' : Tm(i, A'), y' : Tm(i, A'),
-          e : Prf(Eq(Sₗ(i), U, c(Id(A, x, y)), c(Id(A', x', y')))),
-          t : Tm(i, Id(A, x, y)))
-        : Tm(i, Id(A', x', y'))
+(* equation cast(U, U, e, t) --> t *)
+
+equation (e : Prf(Eq(U, c(ℕ), c(ℕ))), t : Tm( ℕ))
+    cast(ℕ, ℕ, e, t) --> t
+
+(* equation cast(↑(A), ↑(A'), e, t) --> box(cast(A, A', EqU↑↑_e(e), unbox(t))) *)
+
+let rhs' (A : Ty, x : Tm(A), y : Tm(A),
+          A' : Ty, x' : Tm( A'), y' : Tm( A'),
+          e : Prf(Eq(U, c(Id(A, x, y)), c(Id(A', x', y')))),
+          t : Tm( Id(A, x, y)))
+        : Tm( Id(A', x', y'))
     :=
-    let f : Tm(i, Π(A, _. A')) := λ(x. cast(i, A, A', EqUIdId_e1(e), x)) in
-    let fx≡fy := congId(i, A, x, y, t, A', x. ﹫(f, x)) in
-    let x'≡fx : Tm(i, Id(A', x', ﹫(f, x))) := mk(sym(EqUIdId_e2(e))) in
-    let fy≡y' : Tm(i, Id(A', ﹫(f, y), y')) := mk(EqUIdId_e3(e)) in
-    transId(i, A', x', ﹫(f, x), y', x'≡fx,
-        transId(i, A', ﹫(f, x), ﹫(f, y), y', fx≡fy, fy≡y'))
+    let f : Tm(Π(A, _. A')) := λ(x. cast(A, A', EqUIdId_e1(e), x)) in
+    let fx≡fy := congId(A, x, y, t, A', x. ﹫(f, x)) in
+    let x'≡fx : Tm(Id(A', x', ﹫(f, x))) := mk(sym(EqUIdId_e2(e))) in
+    let fy≡y' : Tm(Id(A', ﹫(f, y), y')) := mk(EqUIdId_e3(e)) in
+    transId(A', x', ﹫(f, x), y', x'≡fx,
+        transId(A', ﹫(f, x), ﹫(f, y), y', fx≡fy, fy≡y'))
+
+equation (A : Ty,  x  : Tm(A),  y  : Tm(A),
+          A' : Ty, x' : Tm(A'), y' : Tm(A'),
+          e : Prf(Eq(U, c(Id(A, x, y)), c(Id(A', x', y')))),
+          t : Tm(Id(A, x, y)))
+
+    cast(Id(A, x, y), Id(A', x', y'), e, t) -->
+    rhs'(A, x, y, A', x', y', e, t)
+
+let congEq (A : Ty, x : Tm(A), y : Tm(A),
+            e : Prf(Eq(A, x, y)),
+            P : Ty, p {x : Tm(A)} : Tm(P))
+            : Prf(Eq(P, p{x}, p{y}))
+    := subst(e, x' e. Eq(P, p{x}, p{x'}), refleq)
 
 
-equation cast(i, Id(A, x, y), Id(A', x', y'), e, t) -->
-    rhs'(i, A, x, y, A', x', y', e, t)
-
-let congEq (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-            e : Prf(Eq(i, A, x, y)),
-            j : Lvl, P : Ty(j), p {x : Tm(i, A)} : Tm(j, P))
-            : Prf(Eq(j, P, p{x}, p{y}))
-    := subst(e, x' e. Eq(j, P, p{x}, p{x'}), refleq)
-
-
-let eqJ (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-         e : Prf(Eq(i, A, x, y)), P{z : Tm(i, A), p : Tm(i, Id(A, x, z))} : Ty(i))
-        : Prf(Eq(Sₗ(i), U,  c(P{x, refl}), c(P{y, mk(e)})))
+let eqJ (A : Ty, x : Tm(A), y : Tm(A),
+         e : Prf(Eq(A, x, y)), P{z : Tm(A), p : Tm(Id(A, x, z))} : Ty)
+        : Prf(Eq(U, c(P{x, refl}), c(P{y, mk(e)})))
     :=
-    let q := congEq(i, Id(A, x, x), refl, mk(refleq), EqId_i, Sₗ(i), U, e. c(P{x, e})) in
-    subst(e, z p. Eq(Sₗ(i), U, c(P{x, refl}), c(P{z, mk(p)})), q)
+    let q := congEq(Id(A, x, x), refl, mk(refleq), EqId_i, U, e. c(P{x, e})) in
+    subst(e, z p. Eq(U, c(P{x, refl}), c(P{z, mk(p)})), q)
 
-let rhs (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-              e : Prf(Eq(i, A, x, y)),
-              P {x' : Tm(i, A), e : Tm(i, Id(A, x, x'))} : Ty(i),
-               p : Tm(i, P{x, refl}))
-        : Tm(i, P{y, mk(e)})
-    := cast(i, P{x, refl}, P{y, mk(e)}, eqJ(i, A, x, y, e, x p. P{x, p}), p)
+destructor eqJ' (A : Ty, x : Tm(A), y : Tm(A))
+                [e : Prf(Eq(A, x, y))]
+                (P{z : Tm(A), p : Tm( Id(A, x, z))} : Ty)
+        : Prf(Eq(U,  c(P{x, refl}), c(P{y, mk(e)})))
 
-equation J(i, A, x, y, mk(e), x e.P{x, e}, p) --> rhs(i, A, x, y, e, x e.P{x, e}, p)
+let rhs (A : Ty, x : Tm(A), y : Tm(A),
+              e : Prf(Eq(A, x, y)),
+              P {x' : Tm(A), e : Tm( Id(A, x, x'))} : Ty,
+               p : Tm( P{x, refl}))
+        : Tm( P{y, mk(e)})
+    := cast(P{x, refl}, P{y, mk(e)}, eqJ'(e, x p. P{x, p}), p)
+
+(* once again, this rewrite rule preserves typing but is not
+   technically well-typed according to our definitions. it is
+   still safe to use, but we need to skip the subject reduction check *)
+equation skipcheck
+    J(A, x, y, mk(e), x e.P{x, e}, p) -->
+        cast(P{x, refl}, P{y, mk(e)}, eqJ'(e, x p. P{x, p}), p)
 
 (* =========================== *)
 (* --- END OF PRIVATE PART --- *)
 (* =========================== *)
 
-let K (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
-       p : Tm(i, Id(A, x, y)), q : Tm(i, Id(A, x, y)))
-    : Tm(i, Id(Id(A, x, y), p, q))
+let K (A : Ty, x : Tm(A), y : Tm(A),
+       p : Tm(Id(A, x, y)), q : Tm(Id(A, x, y)))
+    : Tm(Id(Id(A, x, y), p, q))
     := mk(EqId_i)
 
 
-let funext (i : Lvl, A : Ty(i), B{x : Tm(i, A)}: Ty(i),
-            f : Tm(i, Π(A, x. B{x})), f' : Tm(i, Π(A, x. B{x})),
-            p {x : Tm(i, A)} : Tm(i, Id(B{x}, ﹫(f, x), ﹫(f', x))))
-        : Tm(i, Id(Π(A, x. B{x}), f, f'))
+let funext (A : Ty, B{x : Tm(A)}: Ty,
+            f : Tm(Π(A, x. B{x})), f' : Tm(Π(A, x. B{x})),
+            p {x : Tm(A)} : Tm(Id(B{x}, ﹫(f, x), ﹫(f', x))))
+        : Tm(Id(Π(A, x. B{x}), f, f'))
     := mk(EqΠ_i(x. unmk(p{x})))
 
 
-let id  : Tm(0ₗ, Π(ℕ, _. ℕ)) := λ(x. x)
-let id' : Tm(0ₗ, Π(ℕ, _. ℕ)) := λ(x. ℕ_ind(x, _. ℕ, 0, _ n. S(n)))
+let id  : Tm(Π(ℕ, _. ℕ)) := λ(x. x)
+let id' : Tm(Π(ℕ, _. ℕ)) := λ(x. ℕ_ind(x, _. ℕ, 0, _ n. S(n)))
 
-let id≡id' : Tm(0ₗ, Id(Π(ℕ, _. ℕ), id, id'))
-    := funext(0ₗ, ℕ, _. ℕ, id, id', x.
-        ℕ_ind(x, x'. Id(ℕ, x', ﹫(id', x')), refl, y e.congId(0ₗ, ℕ, y, ﹫(id', y), e, ℕ, n. S(n))))
+let id≡id' : Tm(Id(Π(ℕ, _. ℕ), id, id'))
+    := funext(ℕ, _. ℕ, id, id', x.
+        ℕ_ind(x, x'. Id(ℕ, x', ﹫(id', x')), refl, y e.congId(ℕ, y, ﹫(id', y), e, ℕ, n. S(n))))
 
 (* in regular MLTT the following would get stuck *)
-let 0' : Tm(0ₗ, ℕ)
-    := J(0ₗ :: Lvl, Π(ℕ, _. ℕ), id, id', id≡id', _ _. ℕ, 0)
+let 0' : Tm(ℕ)
+    := J(Π(ℕ, _. ℕ) :: Ty, id, id', id≡id', _ _. ℕ, 0)
 
 (* but here we are able to compute it *)
 assert 0' = 0

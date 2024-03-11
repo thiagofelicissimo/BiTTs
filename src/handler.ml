@@ -95,7 +95,7 @@ let handle_entry entry =
     } in
     R.dest_info := R.StrTbl.add name infos !R.dest_info
 
-  | C.Rew(mctx, lhs, rhs) ->
+  | C.Rew(skip_check, mctx, lhs, rhs) ->
 
     Format.printf "[%s] " (darkblue "equation");
 
@@ -120,8 +120,8 @@ let handle_entry entry =
       with T.Do_not_unify -> ()
       ) rews;
 
-
-    R.rewrite_rule_checker mctx name mscope (C.scope_msubst msubst mscope []) rhs';
+    if skip_check then Format.printf "%s " (yellow "skiping check")
+    else R.rewrite_rule_checker mctx name mscope (C.scope_msubst msubst mscope []) rhs';
 
     T.rew_rules := T.RewTbl.add name ((p_msubst, rhs') :: rews) !T.rew_rules;
 

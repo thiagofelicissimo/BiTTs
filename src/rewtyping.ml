@@ -77,12 +77,15 @@ let rewrite_rule_checker mctx dest_name lhs_scope (lhs_msubst : T.msubst) rhs =
   let theta_c_theta_d, theta_c_theta_d_scope = begin
     match mctx with
     | None ->
-      Format.printf "%s " (yellow "metacontext omitted, trying to infer it");
+      (* Format.printf "%s " (yellow "metacontext omitted, trying to infer it"); *)
       let xi_d, xi_pcd_mscope = C.scope_mctx dest_info.xi_d_conc (cons_info.xi_c_scope @ cons_info.xi_p_scope) in
       let xi_d_mscope, _ = split_at (List.length xi_d) xi_pcd_mscope in
       (xi_d @ cons_info.xi_c, xi_d_mscope @ cons_info.xi_c_scope)
     | Some(mctx) ->
-      let theta_cd, theta_cd_xi_p_scope = C.scope_mctx mctx cons_info.xi_p_scope in
+      let theta_cd, theta_cd_xi_p_scope =
+        try C.scope_mctx mctx cons_info.xi_p_scope
+        with e -> (Format.printf "%s: could not scope the following mctx in scope %a@.%a@."
+        (red "ERROR") C.pp_scope cons_info.xi_p_scope C.pp_mctx mctx; raise e) in
       let theta_cd_scope, _ = split_at (List.length theta_cd) theta_cd_xi_p_scope in
       (theta_cd, theta_cd_scope)
   end in
@@ -91,17 +94,15 @@ let rewrite_rule_checker mctx dest_name lhs_scope (lhs_msubst : T.msubst) rhs =
     Format.printf "%s: the scopes of the rule and of Theta_c.Theta_d are not the same:@.%a != %a@." (red "ERROR") C.pp_scope lhs_scope C.pp_scope theta_c_theta_d_scope;  assert false end;
 
   let xi_p_theta_c_theta_d = theta_c_theta_d @ cons_info.xi_p in
-(*  let xi_p_xi_c_xi_d = xi_d @ cons_info.xi_c @ cons_info.xi_p in *)
   begin try Ty.check_mctx xi_p_theta_c_theta_d
   with | e -> (Format.printf "%s: the rule metacontext is ill-typed:@.%a@."
                 (red "ERROR") T.pp_mctx xi_p_theta_c_theta_d; raise e) end;
 
 
-
   (* 4 - we check that the tt_c of the rule is typed by Xi_c to the
     right of id : Xi_p *)
   let id_xi_p = T.gen_id_msubst cons_info.xi_p in
-  let id_xi_p' = E.eval_msubst id_xi_p (List.length (cons_info.xi_c @ dest_info.xi_d)) [] [] in
+  let id_xi_p' = E.eval_msubst id_xi_p (List.length theta_c_theta_d) [] [] in
   let v_id_xi_p_tt_c =
     try Ty.check_msubst xi_p_theta_c_theta_d [] [] id_xi_p' tt_c cons_info.xi_c
     with | e -> (Format.printf "%s: the lhs is ill-typed" (red "ERROR"); raise e) in
