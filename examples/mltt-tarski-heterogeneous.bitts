@@ -1,4 +1,4 @@
-(* MLTT with a cumulative hierarchy of Tarski-style universes and universe polymorphism *)
+(* MLTT with an hierarchy of Tarski-style universes and universe polymorphism *)
 
 (* variant in which π is heterogeneous, in the sense that it is allowed to take two codes
    a and b in different universes. this unfortunately leads to more annotations in the syntax. *)
@@ -12,9 +12,12 @@ constructor 0ₗ () () : Lvl
 constructor Sₗ () (_ : Lvl) : Lvl
 destructor maxₗ () [i : Lvl] (j : Lvl) : Lvl
 
-equation maxₗ(0ₗ, j) --> j
-equation maxₗ(Sₗ(i), 0ₗ) --> Sₗ(i)
-equation maxₗ(Sₗ(i), Sₗ(j)) --> Sₗ(maxₗ(i, j))
+equation (j : Lvl)
+   maxₗ(0ₗ, j) --> j
+equation (i : Lvl)
+   maxₗ(Sₗ(i), 0ₗ) --> Sₗ(i)
+equation (i : Lvl, j : Lvl)
+   maxₗ(Sₗ(i), Sₗ(j)) --> Sₗ(maxₗ(i, j))
 
 
 (* Taski-style universe *)
@@ -27,11 +30,6 @@ destructor El (l : Lvl) [A : Tm(U(l))] () : Ty
    what to put in the place of ? *)
 constructor 𝑢 () (l : Lvl) (Sₗ(l) / l : Lvl) : Tm(U(l))
 equation El(𝑢(l)) --> U(l)
-
-
-(* we can also declare ↑ as a destructor if we want *)
-constructor ↑ (i : Lvl) (a : Tm(U(i))) : Tm(U(Sₗ(i)))
-equation El(↑(A)) --> El(A)
 
 
 (* Dependent products *)
@@ -60,7 +58,7 @@ equation El(π(i1, i2, a, x.b{x})) --> Π(El(a), x. El(b{x}))
 (* Natural numbers *)
 constructor ℕ () () : Ty
 constructor 0 () () : Tm(ℕ)
-constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
+constructor S () (n : Tm(ℕ)) : Tm(ℕ)
 
 destructor ind_ℕ    ()
                     [n : Tm(ℕ)]

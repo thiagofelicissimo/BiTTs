@@ -82,7 +82,7 @@ destructor  J   () [i : Lvl]
    not well-typed in our sense. nevertheless, it preserves typing because
    for each well-typed instance of the lhs we will have x and x' convertible.
    therefore, it is still safe to add it *)
-equation J(i, A, x, x', refl, x e.P{x, e}, p) --> p
+(* equation J(i, A, x, x', refl, x e.P{x, e}, p) --> p *)
 
 let congId (i : Lvl, A : Ty(i), x : Tm(i, A), y : Tm(i, A),
             e : Tm(i, Id(A, x, y)), P : Ty(i), p {x : Tm(i, A)} : Tm(i, P))

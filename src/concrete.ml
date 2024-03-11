@@ -154,12 +154,11 @@ let msubst_of_imctx (imctx : imctx) : msubst =
 
 (* PRETTY PRINTING *)
 
-(* pre-condition: scope <> [] *)
 let rec pp_scope fmt scope =
   match scope with
   | [s] -> fprintf fmt "%s" s
   | s :: scope' -> fprintf fmt "%a %s" pp_scope scope' s
-  | [] -> assert false
+  | [] -> ()
 
 
 let rec pp_term fmt t =

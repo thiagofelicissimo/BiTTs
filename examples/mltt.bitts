@@ -1,5 +1,5 @@
 
-(* MLTT with a type-in-type Taski-style universe *)
+(* MLTT with a Taski-style universe *)
 
 (* Judgment forms *)
 sort Ty ()
@@ -9,10 +9,6 @@ sort Tm (A : Ty)
 (* Taski-style universe *)
 constructor U () () : Ty
 destructor El () [A : Tm(U)] () : Ty
-
-(* type in type *)
-constructor 𝑢 () () : Tm(U)
-equation El(𝑢) --> U
 
 
 (* Dependent products *)
@@ -71,7 +67,7 @@ let ac : Tm(Π(U, a. Π(U, b. Π(Π(El(b), _. U), c.
 (* Natural numbers *)
 constructor ℕ () () : Ty
 constructor 0 () () : Tm(ℕ)
-constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
+constructor S () (n : Tm(ℕ)) : Tm(ℕ)
 
 destructor ind_ℕ    ()
                     [n : Tm(ℕ)]
@@ -128,9 +124,9 @@ destructor ind_List     (A : Ty)
                         (* -------------- *)
                         : Tm(P{l})
 
-equation ind_List(nil, l. P{l}, p_nil, a l pl. p_cons{a, l, pl}) --> p_nil
-equation ind_List(cons(a, l), l. P{l}, p_nil, a l pl. p_cons{a, l, pl}) -->
-    p_cons{a, l, ind_List(l, l. P{l}, p_nil, a l pl. p_cons{a, l, pl})}
+equation ind_List(nil, l. P{l}, l_nil, a l pl. l_cons{a, l, pl}) --> l_nil
+equation ind_List(cons(a, l), l. P{l}, l_nil, a l pl. l_cons{a, l, pl}) -->
+    l_cons{a, l, ind_List(l, l. P{l}, l_nil, a l pl. l_cons{a, l, pl})}
 
 
 (* code in U for List *)
@@ -189,8 +185,8 @@ destructor ind_Vec  (A : Ty, n : Tm(ℕ))
 
 equation ind_Vec(nilV, x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w}) --> p_nil
 
-equation ind_Vec(consV(n, a, l), x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w})
-        --> p_cons{n, a, l, ind_Vec(l, x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w})}
+equation ind_Vec(consV(m, a, l), x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w})
+        --> p_cons{m, a, l, ind_Vec(l, x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w})}
 
 constructor vec () (a : Tm(U), n : Tm(ℕ)) : Tm(U)
 equation El(vec(a, n)) --> Vec(El(a), n)

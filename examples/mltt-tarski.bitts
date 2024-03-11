@@ -25,10 +25,8 @@ destructor El (l : Lvl) [A : Tm(U(l))] () : Ty
 constructor 𝑢 () (l : Lvl) (Sₗ(l) / l : Lvl) : Tm(U(l))
 equation El(𝑢(l)) --> U(l)
 
-
-(* we can also declare ↑ as a destructor if we want *)
-constructor ↑ (i : Lvl) (a : Tm(U(i))) : Tm(U(Sₗ(i)))
-equation El(↑(A)) --> El(A)
+constructor ↑ () (i : Lvl, a : Tm(U(i))) (Sₗ(i) / j : Lvl) : Tm(U(j))
+equation El(↑(i, a)) --> El(a)
 
 
 (* Dependent products *)
@@ -53,7 +51,7 @@ equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 (* Natural numbers *)
 constructor ℕ () () : Ty
 constructor 0 () () : Tm(ℕ)
-constructor S () (_ : Tm(ℕ)) : Tm(ℕ)
+constructor S () (n : Tm(ℕ)) : Tm(ℕ)
 
 destructor ind_ℕ    ()
                     [n : Tm(ℕ)]
@@ -68,7 +66,7 @@ equation ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
     ps{n, ind_ℕ(n, x. P{x}, p0, n pn. ps{n, pn})}
 
 (* code in U for ℕ *)
-constructor nat () () : Tm(U(0ₗ))
+constructor nat () () (0ₗ / i : Lvl) : Tm(U(i))
 equation El(nat) --> ℕ
 
 
@@ -83,7 +81,7 @@ equation inst(Λ(i. t{i}), l) --> t{l}
 
 (* universe polymorphic id function *)
 (* the sort is convertible to Tm(∀(i. Π(U(i), a. Π(El(a), _. El(a))))) *)
-let id_poly : Tm(∀(i. El(π(𝑢(i), a. ↑(π(a, _. a))) :: Tm(U(Sₗ(i))))))
+let id_poly : Tm(∀(i. El(π(𝑢(i), a. ↑(i, π(a, _. a))) :: Tm(U(Sₗ(i))))))
   :=  Λ(i. λ(a. λ(x. x)))
 
 (* applying it to 0 *)

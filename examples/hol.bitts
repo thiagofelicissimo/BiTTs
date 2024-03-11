@@ -14,9 +14,9 @@ destructor ﹫ (A : Ty, B : Ty) [t : Tm(→(A, B))] (u : Tm(A)) : Tm(B)
 equation ﹫(λ(x. t{x}), u) --> t{u}
 
 constructor  ∀ () (A : Ty, P{x : Tm(A)} : Tm(prop)) : Tm(prop)
-constructor in∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) (t{x : Tm(A)} : Prf(P{x})) : Prf(∀(A, x. P{x}))
+constructor in∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) (p{x : Tm(A)} : Prf(P{x})) : Prf(∀(A, x. P{x}))
 destructor  el∀ (A : Ty, P{x : Tm(A)} : Tm(prop)) [t : Prf(∀(A, x. P{x}))] (u : Tm(A)) : Prf(P{u})
-equation el∀(in∀(x. p{x}), t) --> p{t}
+equation el∀(in∀(x. p{x}), u) --> p{u}
 
 constructor ⇒ () (P : Tm(prop), Q : Tm(prop)) : Tm(prop)
 constructor in⇒ (P : Tm(prop), Q : Tm(prop)) (q{p : Prf(P)} : Prf(Q)) : Prf(⇒(P, Q))

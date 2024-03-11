@@ -4,13 +4,11 @@ module T = Term
 module V = Value
 module Ty = Typing
 module E = Eval
+module R = Rewtyping
 open Common
 
+
 exception Overlap_detected
-
-exception TODO
-
-let rewrite_rule_checker rule = raise TODO
 
 let handle_entry entry =
   match entry with
@@ -45,13 +43,32 @@ let handle_entry entry =
     T.schem_rules :=
       T.RuleTbl.add name (T.Const(List.length inst_msubst, mctx_args', inst_msubst, ty_p)) !T.schem_rules;
 
-    Format.printf "[%s %s] %s@." (darkblue "constructor") name (green "OK")
+    Format.printf "[%s %s] %s@." (darkblue "constructor") name (green "OK");
+
+    (* we store info needed for typing rewrite rules *)
+    let xi_c_scope, _ =
+      split_at (List.length mscope_pars_args - List.length mscope_pars) mscope_pars_args in
+    let infos : R.cons_info =
+      {xi_p_scope   = mscope_pars;  (* |Xi_p| *)
+      xi_c_scope    = xi_c_scope;   (* |Xi_c| *)
+      xi_p          = mctx_pars';   (* Xi_p *)
+      xi_c          = mctx_args';   (* Xi_c *)
+      xi_i          = mctx_ixs';    (* Xi_i *)
+      sort          = ty';          (* sort of c *)
+      inst_msubst   = inst_msubst;  (* vv_i *)
+     } in
+    R.cons_info := R.StrTbl.add name infos !R.cons_info
+
+
   | C.Dest(name, mctx_pars_ixs, name_arg, ty_arg, mctx_args, ty) ->
 
     (* scoping *)
-    let full_concrete_mctx = mctx_args @ [(name_arg, [], ty_arg)] @ mctx_pars_ixs in
-    let full_mctx, full_mscope = C.scope_mctx full_concrete_mctx [] in
-    let ty' = C.scope_tm ty full_mscope [] in
+    let mctx_pars_ixs', mscope_pars_ixs = C.scope_mctx (mctx_pars_ixs) [] in
+    let ty_arg' = C.scope_tm ty_arg mscope_pars_ixs [] in
+    let mctx_args', mscope_pars_ixs_args = C.scope_mctx mctx_args (name_arg :: mscope_pars_ixs) in
+    let ty' = C.scope_tm ty mscope_pars_ixs_args [] in
+
+    let full_mctx = mctx_args' @ [([], ty_arg')] @ mctx_pars_ixs' in
 
     (* typechecking*)
     Ty.check_mctx full_mctx;
@@ -61,18 +78,27 @@ let handle_entry entry =
     let ty_arg_p, ty_arg_mscope = C.scope_p_tm ty_arg in
 
     (* we verify that it has the expected scope *)
-    let _, pars_ixs_mscope = split_at (1 + List.length mctx_args) full_mscope in
-    assert (ty_arg_mscope = pars_ixs_mscope);
+    assert (ty_arg_mscope = mscope_pars_ixs);
 
     (* adding to the theory *)
-    let mctx_args', _ = split_at (List.length mctx_args) full_mctx in
     T.schem_rules := T.RuleTbl.add name (T.Dest(ty_arg_p, mctx_args', ty')) !T.schem_rules;
 
-    Format.printf "[%s %s] %s@." (darkblue "destructor") name (green "OK")
+    Format.printf "[%s %s] %s@." (darkblue "destructor") name (green "OK");
+
+    (* we store info needed for typing rewrite rules *)
+    let infos : R.dest_info =
+    {xi_pi      = mctx_pars_ixs';        (* Xi_pi *)
+     xi_d_conc  = mctx_args;             (* Xi_d in concrete syntax *)
+     xi_d       = mctx_args';            (* Xi_d *)
+     sort_parg  = ty_arg';               (* sort of parg *)
+     sort       = ty'                    (* sort of d *)
+    } in
+    R.dest_info := R.StrTbl.add name infos !R.dest_info
 
   | C.Rew(mctx, lhs, rhs) ->
 
-    if mctx <> None then assert false;
+    Format.printf "[%s] " (darkblue "equation");
+
     let name, msubst = match lhs with
       | Symb(name, msubst) ->
         (* we verify that name is a destructor *)
@@ -94,9 +120,12 @@ let handle_entry entry =
       with T.Do_not_unify -> ()
       ) rews;
 
+
+    R.rewrite_rule_checker mctx name mscope (C.scope_msubst msubst mscope []) rhs';
+
     T.rew_rules := T.RewTbl.add name ((p_msubst, rhs') :: rews) !T.rew_rules;
 
-    Format.printf "[%s] %s@." (darkblue "equation") (yellow "type-checker for rewrite rules not yet implemented")
+    Format.printf "%s@." (green "OK");
 
   | Eval(tm) ->
     let tm = C.scope_tm tm [] [] in

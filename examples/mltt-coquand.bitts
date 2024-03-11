@@ -40,7 +40,7 @@ equation ﹫(λ(x. t{x}), u) --> t{u}
 (* Natural numbers *)
 constructor ℕ () () : Ty(0ₗ)
 constructor 0 () () : Tm(0ₗ, ℕ)
-constructor S () (_ : Tm(0ₗ, ℕ)) : Tm(0ₗ, ℕ)
+constructor S () (n : Tm(0ₗ, ℕ)) : Tm(0ₗ, ℕ)
 
 destructor ℕ_ind    ()
                     [n : Tm(0ₗ, ℕ)]

@@ -8,11 +8,12 @@ all-examples:
 	dune exec -- bitts examples/hol.bitts
 	dune exec -- bitts examples/hol-light.bitts
 	dune exec -- bitts examples/mltt-tarski.bitts
-	dune exec -- bitts examples/mltt-tarski-heterogeneous.bitts
 	dune exec -- bitts examples/mltt-coquand.bitts
+	dune exec -- bitts examples/mltt-tarski-heterogeneous.bitts
 	dune exec -- bitts examples/observational-type-theory.bitts
 	dune exec -- bitts examples/observational-type-theory-2.bitts
-	dune exec -- bitts examples/mltt-funext-canonicity.bitts
+
+# dune exec -- bitts examples/mltt-funext-canonicity.bitts
 
 mltt:
 	dune exec -- bitts examples/mltt.bitts

@@ -71,6 +71,7 @@ entry:
   | DEST id=IDENT mctx1=mctx LSQB id_arg=IDENT COLON ty_arg=term RSQB mctx2=mctx COLON ty=term
     { Dest(id, mctx1, id_arg, ty_arg, mctx2, ty) }
   | REW lhs=term REDUCES rhs=term { Rew(None, lhs, rhs) }
+  | REW mctx=mctx lhs=term REDUCES rhs=term { Rew(Some(mctx), lhs, rhs) }
   | LET id=IDENT COLON ty=term DEF tm=term
     { Let(id, [], ty, tm) }
   | LET id=IDENT mctx=mctx COLON ty=term DEF tm=term
