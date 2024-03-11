@@ -212,8 +212,7 @@ destructor castEq (a : Tm(U), b : Tm(U)) [e : Tm(Eq(U, a, U, b))] (t : Tm(El(a))
 let cong (A : Ty, x : Tm(A), y : Tm(A), e : Tm(Eq(A, x, A, y)),
           B{x : Tm(A)} : Ty, f{x:Tm(A)} : Tm(B{x}))
           : Tm(Eq(B{x}, f{x}, B{y}, f{y}))
-    := EqΠΠ_e([Tm(Eq(Π(A, x.B{x}), λ(x.f{x}), Π(A, x.B{x}), λ(x.f{x})))]
-              refl, x, y, e)
+    := EqΠΠ_e(refl :: Tm(Eq(Π(A, x.B{x}), λ(x.f{x}), Π(A, x.B{x}), λ(x.f{x}))), x, y, e)
 
 (* note that by taking a U-valued f in cong, we get a version of
    the axiom "R" (from the original "Observational Equality, Now!"
@@ -289,6 +288,6 @@ let ℕindU (n : Tm(ℕ), p0 : Tm(U), ps{n : Tm(ℕ), e : Tm(U)} : Tm(U))
 
 let 0≢Sn (n : Tm(ℕ), p : Tm(Eq(ℕ, 0, ℕ, S(n)))) : Tm(∅)
     := let c∅≡c⋆ := cong(ℕ, 0, S(n), p, _.U, n. ℕindU(n, c⋆, _ _. c∅)) in
-    cast([Tm(U)] c⋆, c∅, c∅≡c⋆, I)
+    cast(c⋆ :: Tm(U), c∅, c∅≡c⋆, I)
 
 (* constructor TODO (A : Ty) () : Tm(A) *)

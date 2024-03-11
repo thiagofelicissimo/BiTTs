@@ -39,7 +39,7 @@ let rec token lb =
   | "{"  -> LBRACK
   | "}"  -> RBRACK
   | ":" -> COLON
-(*  | "::" -> COCOLON *)
+  | "::" -> COCOLON
   | "." -> DOT
   | "," -> COMMA
   | "-->" -> REDUCES

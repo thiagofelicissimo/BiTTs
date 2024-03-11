@@ -1,7 +1,5 @@
 (menhir
- (modules parser)
- (flags
-  (--explain)))
+ (modules parser))
 
 (executable
  (package bitts)

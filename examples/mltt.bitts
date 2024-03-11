@@ -103,15 +103,16 @@ evaluate fact_4
 
 
 (* a checkable term t becomes inferable if annotated
-   with a checkable sort T, as in [T] t
+   with a checkable sort T, as in t :: T.
    redexes can be written this way *)
-let redex : Tm(ℕ) := ﹫([Tm(Π(ℕ, _. ℕ))] λ(x. x), 0)
+let redex : Tm(ℕ) := ﹫(λ(x. x) :: Tm(Π(ℕ, _. ℕ)), 0)
 evaluate redex
 
-(* we can also use let expressions *)
+(* we can also use let expressions. note that in this case,
+   the ascription is associated with the innermost term,
+   otherwise this example would be ill-scoped *)
 let redex' : Tm(ℕ) :=
-    let ty : Ty := Π(ℕ, _. ℕ) in
-    ﹫([Tm(ty)] λ(x. x), 0)
+    ﹫(let ty : Ty := Π(ℕ, _. ℕ) in λ(x. x) :: Tm(ty), 0)
 
 
 (* Lists *)

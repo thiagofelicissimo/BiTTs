@@ -83,7 +83,7 @@ equation inst(Λ(i. t{i}), l) --> t{l}
 
 (* universe polymorphic id function *)
 (* the sort is convertible to Tm(∀(i. Π(U(i), a. Π(El(a), _. El(a))))) *)
-let id_poly : Tm(∀(i. El([Tm(U(Sₗ(i)))] π(𝑢(i), a. ↑(π(a, _. a))))))
+let id_poly : Tm(∀(i. El(π(𝑢(i), a. ↑(π(a, _. a))) :: Tm(U(Sₗ(i))))))
   :=  Λ(i. λ(a. λ(x. x)))
 
 (* applying it to 0 *)

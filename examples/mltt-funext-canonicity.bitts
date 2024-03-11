@@ -263,7 +263,7 @@ let id≡id' : Tm(0ₗ, Id(Π(ℕ, _. ℕ), id, id'))
 
 (* in regular MLTT the following would get stuck *)
 let 0' : Tm(0ₗ, ℕ)
-    := J([Lvl] 0ₗ, Π(ℕ, _. ℕ), id, id', id≡id', _ _. ℕ, 0)
+    := J(0ₗ :: Lvl, Π(ℕ, _. ℕ), id, id', id≡id', _ _. ℕ, 0)
 
 (* but here we are able to compute it *)
 assert 0' = 0

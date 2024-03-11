@@ -290,5 +290,5 @@ let ℕind (n : Tm(ℕ), P{n : Tm(ℕ)} : Ty, p0 : Tm(P{0}),
 
 let 0≢Sn (n : Tm(ℕ), p : Tm(Eq(ℕ, 0, S(n)))) : Tm(∅)
     := let c∅≡c⋆ := R(p, n. El(ℕind(n, _. U, c(⋆), _ _. c(∅)))) in
-    cast([Ty] ⋆, ∅, c∅≡c⋆, I)
+    cast(⋆ :: Ty, ∅, c∅≡c⋆, I)
 

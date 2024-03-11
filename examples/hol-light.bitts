@@ -47,7 +47,7 @@ destructor eq_mp (P : Tm(prop), Q : Tm(prop))
 
 destructor mk_comb (A : Ty, B : Ty, f : Tm(→(A, B)), g : Tm(→(A, B)))
                    [e1 : Prf(Eq(→(A, B), f, g))]
-                   (x : Tm(A), y : Tm(A), e2 : Prf(Eq(A), x, y))
+                   (x : Tm(A), y : Tm(A), e2 : Prf(Eq(A, x, y)))
                    : Prf(Eq(B, ﹫(f, x), ﹫(g, y)))
 
 

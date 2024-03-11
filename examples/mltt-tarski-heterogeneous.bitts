@@ -92,13 +92,13 @@ equation inst(Λ(i. t{i}), l) --> t{l}
 (* universe polymorphic id function *)
 (* note that the sort cannot be simplified, because
    maxₗ(Sₗ(i), maxₗ(i,i)) = Sₗ(i) does not hold on open terms *)
-let id_poly : Tm(∀(i. El([Tm(U(maxₗ([Lvl] Sₗ(i), maxₗ(i,i))))]
-                      π(Sₗ(i), maxₗ(i,i), 𝑢(i), a. π(i, i, a, _. a)))))
+let id_poly : Tm(∀(i. El(π(Sₗ(i), maxₗ(i,i), 𝑢(i), a. π(i, i, a, _. a))
+                          :: Tm(U(maxₗ(Sₗ(i) :: Lvl, maxₗ(i,i)))))))
   :=  Λ(i. λ(a. λ(x. x)))
 
 (* the above sort is convertible to Tm(∀(i. Π(U(i), a. Π(El(a), _. El(a))))) *)
-evaluate Tm(∀(i. El([Tm(U(maxₗ(Sₗ(i), maxₗ(i,i))))]
-                    π(Sₗ(i), maxₗ(i,i), 𝑢(i), a. π(i, i, a, _. a)))))
+evaluate Tm(∀(i. El(π(Sₗ(i), maxₗ(i,i), 𝑢(i), a. π(i, i, a, _. a))
+                          :: Tm(U(maxₗ(Sₗ(i) :: Lvl, maxₗ(i,i)))))))
 
 (* applying it to 0 *)
 let 0' : Tm(ℕ) := ﹫(﹫(inst(id_poly, 0ₗ), nat), 0)
