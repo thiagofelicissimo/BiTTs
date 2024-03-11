@@ -11,6 +11,7 @@ all-examples:
 	dune exec -- bitts examples/mltt-coquand.bitts
 	dune exec -- bitts examples/observational-type-theory.bitts
 	dune exec -- bitts examples/observational-type-theory-2.bitts
+	dune exec -- bitts examples/mltt-funext-canonicity.bitts
 
 mltt:
 	dune exec -- bitts examples/mltt.bitts

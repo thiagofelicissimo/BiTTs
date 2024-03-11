@@ -218,7 +218,7 @@ destructor EqUWW_e2  (A  : Ty, B {x  : Tm(A )} : Ty,
 equation cast(Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
     -->  λ(x'.
             let x := cast(A', A, sym(EqUΠΠ_e1(e)), x') in
-            cast(B{x}, B'{x'}, EqUΠΠ_e1(e, x'), ﹫(t, x)))
+            cast(B{x}, B'{x'}, EqUΠΠ_e2(e, x'), ﹫(t, x)))
 
 equation cast(W(A, x. B{x}), W(A', x'. B'{x'}), e, sup(t, u))
     --> let t' := cast(A, A', EqUWW_e1(e), t) in
