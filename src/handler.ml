@@ -116,6 +116,7 @@ let handle_entry entry =
     List.iter (fun (p_msubst', _) ->
       try
         T.check_unify_msubst p_msubst p_msubst';
+        Format.printf "%s: the rewrite rules are overlaping@." (red "ERROR");
         raise Overlap_detected
       with T.Do_not_unify -> ()
       ) rews;

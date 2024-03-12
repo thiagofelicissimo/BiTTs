@@ -1,5 +1,5 @@
 
-(*  an extension of MLTT with funext and K with canonicity for natural numbers.
+(*  an extension of MLTT with funext and K with canonicity for natural numbers (modulo type-in-type).
     any MLTT program of type Nat using funext and K can be computed in this theory
     (except if it explores non-termination by using the fact that we have type in type) *)
 
@@ -7,7 +7,7 @@
     identity types. then we forget about the OTT layer. only the proofs of
     funext and K remained exposed.
     then the only ways of exposing the OTT primitives are: 1- error messages,
-    2- computing terms with variables, 3- computing terms of type Id *)
+    2- computing terms with variables, 3- computing the value of a term of type Id *)
 
 
 sort Ty ()
@@ -103,16 +103,15 @@ sort Prf (P : Prop)
 (* heterogeneous observational equality *)
 constructor Eq () (A : Ty, a : Tm(A), b : Tm(A)) : Prop
 
+constructor refleq (A : Ty, a : Tm(A)) ()
+                 (a / b : Tm(A)) : Prf(Eq(A, a, b))
+
+(* the following two symbols (mk and cast) are the only way to
+   escape from Prop to Ty *)
+
 constructor mk (A : Ty, x : Tm(A), y : Tm(A))
                (p : Prf(Eq(A, x, y)))
             : Tm(Id(A, x, y))
-
-constructor unmk (A : Ty, x : Tm(A), y : Tm(A))
-               (p : Tm(Id(A, x, y)))
-            : Prf(Eq(A, x, y))
-
-constructor refleq (A : Ty, a : Tm(A)) ()
-                 (a / b : Tm(A)) : Prf(Eq(A, a, b))
 
 destructor cast () [A : Ty] (B : Ty, e : Prf(Eq(U, c(A), c(B))), t : Tm(A)) : Tm(B)
 
@@ -122,6 +121,16 @@ destructor subst (A : Ty, x : Tm(A), y : Tm(A))
                   p : Prf(P{x, refleq}))
                 : Prf(P{y, e})
 
+
+(* unmk could be derived from J if we added Prop in Ty. because proving unmk
+   would be the only use for this, I prefer to add it as an axiom *)
+constructor unmk (A : Ty, x : Tm(A), y : Tm(A)) (p : Tm(Id(A, x, y)))
+            : Prf(Eq(A, x, y))
+
+
+(* sym and trans can be derived from subst, but here I add them as
+   constructor to omit some of the args *)
+
 constructor sym (A : Ty, x : Tm(A), y : Tm(A)) (p : Prf(Eq(A, y, x)))
     : Prf(Eq(A, x, y))
 
@@ -129,7 +138,8 @@ constructor trans (A : Ty, x : Tm(A), z : Tm(A))
                   (y : Tm(A), p : Prf(Eq(A, x, y)), p : Prf(Eq(A, y, z)))
     : Prf(Eq(A, x, z))
 
-(* some of the axioms defining the observational equality *)
+(* some of the axioms defining the observational equality, we will
+   not need all of them *)
 
 constructor EqΠ_i  (A : Ty,  B{x : Tm(A)} : Ty,
                     f : Tm(Π(A, x.B{x})), f' : Tm(Π(A, x.B{x})))
@@ -178,7 +188,7 @@ destructor EqUIdId_e3 (A : Ty, x : Tm(A), y : Tm(A),
                       [e : Prf(Eq(U, c(Id(A, x, y)), c(Id(A', x', y'))))]
                       () : Prf(Eq(A', cast(A, A', EqUIdId_e1(e), y), y'))
 
-constructor TODO (A:Ty) () : Tm(A)
+(* computation rules for cast *)
 
 equation   (A : Ty, B{x : Tm(A)} : Ty, A' : Ty, B'{x' : Tm( A')} : Ty,
             e : Prf(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'})))),
@@ -192,12 +202,8 @@ equation   (A : Ty, B{x : Tm(A)} : Ty, A' : Ty, B'{x' : Tm( A')} : Ty,
 equation (e : Prf(Eq(U, c(∅), c(∅))), t : Tm( ∅))
     cast(∅, ∅, e, t) --> t
 
-(* equation cast(U, U, e, t) --> t *)
-
 equation (e : Prf(Eq(U, c(ℕ), c(ℕ))), t : Tm( ℕ))
     cast(ℕ, ℕ, e, t) --> t
-
-(* equation cast(↑(A), ↑(A'), e, t) --> box(cast(A, A', EqU↑↑_e(e), unbox(t))) *)
 
 let rhs' (A : Ty, x : Tm(A), y : Tm(A),
           A' : Ty, x' : Tm( A'), y' : Tm( A'),
@@ -234,24 +240,18 @@ let eqJ (A : Ty, x : Tm(A), y : Tm(A),
     let q := congEq(Id(A, x, x), refl, mk(refleq), EqId_i, U, e. c(P{x, e})) in
     subst(e, z p. Eq(U, c(P{x, refl}), c(P{z, mk(p)})), q)
 
-destructor eqJ' (A : Ty, x : Tm(A), y : Tm(A))
-                [e : Prf(Eq(A, x, y))]
-                (P{z : Tm(A), p : Tm( Id(A, x, z))} : Ty)
-        : Prf(Eq(U,  c(P{x, refl}), c(P{y, mk(e)})))
-
 let rhs (A : Ty, x : Tm(A), y : Tm(A),
               e : Prf(Eq(A, x, y)),
               P {x' : Tm(A), e : Tm( Id(A, x, x'))} : Ty,
                p : Tm( P{x, refl}))
         : Tm( P{y, mk(e)})
-    := cast(P{x, refl}, P{y, mk(e)}, eqJ'(e, x p. P{x, p}), p)
+    := cast(P{x, refl}, P{y, mk(e)}, eqJ(A, x, y, e, x p. P{x, p}), p)
 
 (* once again, this rewrite rule preserves typing but is not
    technically well-typed according to our definitions. it is
    still safe to use, but we need to skip the subject reduction check *)
 equation skipcheck
-    J(A, x, y, mk(e), x e.P{x, e}, p) -->
-        cast(P{x, refl}, P{y, mk(e)}, eqJ'(e, x p. P{x, p}), p)
+    J(A, x, y, mk(e), x e.P{x, e}, p) --> rhs(A, x, y, e, x e. P{x, e}, p)
 
 (* =========================== *)
 (* --- END OF PRIVATE PART --- *)
