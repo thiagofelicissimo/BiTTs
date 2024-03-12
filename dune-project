@@ -23,9 +23,9 @@
  (description "A longer description")
  (depends
    (ocaml (>= 4.13.1))
-   (dune (>= 3.3))
+   (dune (>= 3.14))
    (sedlex (>= 2.5))
-   (menhir (>= 20220210)))
+   (menhir (>= 3.0)))
  (tags
   (topics "to describe" your project)))
 
