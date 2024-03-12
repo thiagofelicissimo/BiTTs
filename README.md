@@ -54,18 +54,29 @@ constructor λ (A : Ty, B{x : Tm(A)} : Ty)
 
 The previous description covers non-indexed types. In order to specify constructors of an indexed type (such as equality), we also consider a metavariable context $\Xi_i$ of *indices*. Then, the sort $T$ must now be a pattern on the metavariables of $\Xi_p$ and $\Xi_i$. Finally, we need to give an *instantiation substitution*, specifying the values of the metavariables in $\Xi_i$ in terms of the ones in $\Xi_p$ and $\Xi_c$.
 
-For instance, in the case of refl we declare the metavariable $y$ as an index, and the instantiation substitution assigns it the value $x$. In the case of the nil constructor for vectors, we declare the natural number $n$ as an index and assign it the value $0$.
+For instance, in the case of refl we declare the metavariable $y$ as an index, and the instantiation substitution assigns it the value $x$. In the case of the constructors for vectors, we declare the natural number $n$ as an index and assign it the value $0$ in the case of nil and $S(m)$ in the case of cons.
 ```
 (* Equality *)
 constructor Eq () (A : Ty, x : Tm(A), y : Tm(A)) : Ty
 
-constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Tm(Eq(A, x, y))
+constructor refl (A : Ty, x : Tm(A))
+                 ()
+                 (x / y : Tm(A))
+            : Tm(Eq(A, x, y))
 ...
 
 (* Vectors *)
 constructor Vec () (A : Ty, n : Tm(ℕ)) : Ty
 
-constructor nilV (A : Ty) () (0 / n : Tm(ℕ)) : Tm(Vec(A, n))
+constructor nilV  (A : Ty)
+                  ()
+                  (0 / n : Tm(ℕ))
+                : Tm(Vec(A, n))
+
+constructor consV (A : Ty)
+                  (m : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, m)))
+                  (S(m) / n : Tm(ℕ))
+                : Tm(Vec(A, n))
 ...
 ```
 
