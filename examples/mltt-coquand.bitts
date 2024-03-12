@@ -32,10 +32,10 @@ destructor ﹫ (l : Lvl,  A : Ty(l), B {x : Tm(l, A)} : Ty(l)) [t : Tm (l, Π(A,
 
 equation ﹫(λ(x. t{x}), u) --> t{u}
 
-(* we unfortunately cannot add the equation ↑(Π(A, x.B{x})) --> Π(↑(A),x.↑(B{x})).
-   if we orient it in the direct sense, then the pattern Tm(Sₗ(l), ↑(A)) in the
-   declarations of box and unbox would overlap it. if we orient in the inverse
-   sense, then the pattern Tm(l, Π(A, x. B{x})) in λ and ﹫ would overlap it *)
+(* some authors consider a stronger form of cumulativity in which we have
+   ↑(Π(A, x.B{x})) = Π(↑(A),x.↑(B{x})). we unfortunately cannot have it here
+   because ↑ and Π are both constructors, and therefore cannot be the head
+   of a rewrite rule *)
 
 (* Natural numbers *)
 constructor ℕ () () : Ty(0ₗ)

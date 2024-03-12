@@ -27,12 +27,13 @@ destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
 
 equation ﹫(λ(x. t{x}), u) --> t{u}
 
-
+(* code in U for Π *)
 constructor π () (a : Tm(U), b{_ : Tm(El(a))} : Tm(U)) : Tm(U)
 equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
 (* polymorphic identity at U *)
 let idU : Tm(Π(U, a. Π(El(a), _. El(a)))) := λ(a. λ(x. x))
+
 
 (* Dependent sums *)
 constructor Σ () (A : Ty, B{x : Tm(A)} : Ty) : Ty
@@ -52,12 +53,13 @@ destructor π₂       (A : Ty, B{x : Tm(A)} : Ty)
 equation π₁(mkΣ(t, u)) --> t
 equation π₂(mkΣ(t, u)) --> u
 
-
+(* code in U for Σ *)
 constructor σ () (a : Tm(U), b{x : Tm(El(a))} : Tm(U)) : Tm(U)
 equation El(σ(a, x.b{x})) --> Σ(El(a), x. El(b{x}))
 
 
-(* axiom of choice *)
+(* type-theoretic "axiom of choice". note that, thanks to erased arguments,
+   the resulting term has no type annotations *)
 let ac : Tm(Π(U, a. Π(U, b. Π(Π(El(b), _. U), c.
             Π(Π(El(a), _. Σ(El(b), x. El(﹫(c, x)))), _.
             Σ(Π(El(a), _. El(b)), f. Π(El(a), x. El(﹫(c, ﹫(f, x))))))))))
@@ -96,7 +98,6 @@ let fact : Tm(Π(ℕ, _. ℕ)) := λ(x. ind_ℕ(x, _. ℕ, S(0), n m. ﹫(﹫(×
 
 let fact_4 : Tm(ℕ) := ﹫(fact, S(S(S(S(0)))))
 evaluate fact_4
-
 
 (* a checkable term t becomes inferable if annotated
    with a checkable sort T, as in t :: T.
@@ -155,6 +156,9 @@ equation J(refl, y e. P{y, e}, p) --> p
 constructor eq () (a : Tm(U), x : Tm(El(a)), y : Tm(El(a))) : Tm(U)
 equation El(eq(a, x, y)) --> Eq(El(a), x, y)
 
+
+(* some basic properties of equality *)
+
 let sym : Tm(Π(U, a. Π(El(a), x. Π(El(a), y. Π(Eq(El(a), x, y), _. Eq(El(a), y, x))))))
     :=  λ(a. λ(x. λ(y. λ(p. J(p, z q. Eq(El(a), z, x), refl)))))
 
@@ -194,6 +198,7 @@ equation El(vec(a, n)) --> Vec(El(a), n)
 
 let 2∷1∷0∷nil : Tm(Vec(ℕ, S(S(S(0))))) := consV(S(S(0)), S(S(0)), consV(S(0), S(0), consV(0, 0, nilV)))
 
+(* maps n to the vector n-1, ..., 0 *)
 let mk_Vec : Tm(Π(ℕ, n. Vec(ℕ, n)))
     := λ(n. ind_ℕ(n, x. Vec(ℕ, x), nilV, x y. consV(x, x, y)))
 
@@ -231,6 +236,7 @@ equation ind_W(sup(a, f), x. P{x}, x y z. p{x, y, z}) -->
 constructor w () (a : Tm(U), b{x : Tm(El(a))} : Tm(U)) : Tm(U)
 equation El(w(a, x.b{x})) --> W(El(a), x.El(b{x}))
 
+
 (* auxiliary types to define nat with W *)
 
 constructor ⊥ () () : Ty
@@ -260,9 +266,13 @@ equation if(ff, x.P{x}, a, b) --> b
 constructor bool () () : Tm(U)
 equation El(bool) --> Bool
 
+
 (* different definition of Nat, using W types *)
+
 let Nat : Ty := W(Bool, x. El(if(x, _. U, ⊤c, ⊥c)))
+
 let zero : Tm(Nat) := sup(ff, λ(x. ind_⊥(x, Nat)))
+
 let succ (x : Tm(Nat)) : Tm(Nat) := sup(tt, λ(_. x))
 
 let plus : Tm(Π(Nat, _. Π(Nat, _. Nat)))

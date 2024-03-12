@@ -1,10 +1,5 @@
 (* MLTT with a cumulative hierarchy of Tarski-style universes and universe polymorphism *)
 
-(* variant in which the two arguents of π must be in the same universe,
-   so if a : Tm(U(i)) and b : Tm(U(j)) with j < i, we must lift b from U(j)
-   to U(i) before applying π to it *)
-
-
 (* Judgment forms *)
 sort Ty ()
 sort Tm (A : Ty)
@@ -45,8 +40,20 @@ destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
 
 equation ﹫(λ(x. t{x}), u) --> t{u}
 
-constructor π (i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
+(* code for Π in U.
+   note that π requires the codes a and b to be in the same universe, which
+   can always be achieved by lifting the smaller one *)
+constructor π(i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
+
 equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
+
+(* some authors consider a stronger form of cumulativity in which we have
+   ↑(i, π(a, x.b{x})) = π(↑(i, a), x.↑(i, b{x})). we unfortunately cannot have
+   it here because ↑ and π are both constructors, and therefore cannot be the head
+   of a rewrite rule. note that we could also declare ↑ as a destructor, allowing
+   us to have the rule ↑(i, π(a, x.b{x})) --> π(↑(i, a),x.↑(b{i, x})). however, in
+   this case the rule El(↑(i, a)) --> El(a) would not be valid anymore *)
+
 
 (* Natural numbers *)
 constructor ℕ () () : Ty
@@ -67,6 +74,7 @@ equation ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
 
 (* code in U for ℕ *)
 constructor nat () () (0ₗ / i : Lvl) : Tm(U(i))
+
 equation El(nat) --> ℕ
 
 
