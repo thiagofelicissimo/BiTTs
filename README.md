@@ -26,7 +26,7 @@ This project implements the generic bidirectional typing algorithm proposed in [
 
 ### Specifying theories
 
-As described in [1], theories are specified by four types of entries: sort rules, constructor rules, destructor rules and rewrite rules. We now show how these can be specified in the concrete syntax of the implementation. In the following, we take the definitions of terms, substitutions, context, patterns, etc from *op. cit.*. We also recommend looking at the file `examples/mltt.bitt` for more examples of how to define theories.
+As described in [1], theories are specified by four types of entries: sort rules, constructor rules, destructor rules and rewrite rules. We now show how these can be specified in the concrete syntax of the implementation. In the following, we take the definitions of terms, substitutions, context, patterns, etc from *op. cit.*. We also recommend looking at the file `examples/mltt.bitts` for more examples of how to define theories.
 
 
 
@@ -90,7 +90,7 @@ For instance, we can add $\beta$-reduction with the following rule.
 equation ﹫(λ(x. t{x}), u) --> t{u}
 ```
 
-In order for the rule to be accepted, the implementation checks that it is well-typed, requiring some conditions (we refer to [1] for all the details).
+In order for the rule to be accepted, the implementation checks that it is well-typed, ensuring that it preserves typing (we refer to [1] for all the details). In order to do this, the checker tries to guess the rule metavariable context. If you are getting weird error messages, try to specify the context explicitly (see the file `ott.bitts` for an example of this). This check can also be skipped with the `skipcheck` keyword, by writing `equation skipcheck lhs --> rhs`.
 
 
 
@@ -107,7 +107,7 @@ As discussed in [1], not all well-typed terms can be written directly. Whenever 
 let redex : Tm(ℕ) := ﹫(λ(x. x) :: Tm(Π(ℕ, _. ℕ)), 0)
 ```
 
-Finally, one can also use local let expressions in order to make writing long terms easier.
+One can also use local let expressions in order to make writing long terms easier.
 ```
 let redex' : Tm(ℕ) :=
     let ty : Ty := Π(ℕ, _. ℕ) in
@@ -117,7 +117,7 @@ let redex' : Tm(ℕ) :=
 
 ### Evaluating terms and checking for equality
 
-We also provide the commands `eval` for evaluating terms to normal form, and `check` for checking that two terms are definitionally equal. For instance, assuming we have added natural numbers to the theory and defined factorial, we can use them to compute the factorial of 3 and check that it is equal to 6.
+We also provide the commands `evaluate` for evaluating terms to normal form, and `assert` for asserting that two terms are definitionally equal. For instance, assuming we have added natural numbers to the theory and defined factorial, we can use them to compute the factorial of 3 and check that it is equal to 6.
 ```
 let fact3 : Tm(ℕ) := ﹫(fact, S(S(S(0))))
 evaluate fact3
@@ -140,10 +140,10 @@ We provide the following examples of theories in the directory `examples/`:
 - `mltt-tarski.bitts` and `mltt-coquand.bitts` : Martin-Lof Type Theory with a hierarchy of (weak) cumulative Tarski- and Coquand-style universes and universe polymorphism, with Π types and natural numbers. As an example of term we can write in this theory, we give the universe-polymorphic identity function.
 
 
-- `ott.bitts` and `ott-2.bitts` : Two variants of observational type theory, with an heterogeneous equality and a Tarski-style universe, or with an homogeneous equality and a type-in-type Coquand-style universe. As an example, we given the definition of natural numbers in terms of W-types and derive its eliminator.
+- `ott.bitts` and `ott-2.bitts` : Two variants of Observational Type Theory, with an heterogeneous equality and a Tarski-style universe, or with an homogeneous equality and a type-in-type Coquand-style universe. As an example, we given the definition of natural numbers in terms of W-types and derive its eliminator.
 
 
-- `big-numbers.bitt` : Excerpt of `mltt.bitt` used to test the performance of the evaluator, computes factorial of 8 in around half a second in the tested machine.
+- `big-numbers.bitts` : Excerpt of `mltt.bitts` used to test the performance of the evaluator, computes factorial of 8 in around half a second in the tested machine.
 
 ## Implementation
 
