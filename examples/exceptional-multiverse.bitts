@@ -1,0 +1,101 @@
+
+(* A theory inspired by Maillard et al's Multiverse Type Theory (MuTT),
+   with a pure and an exceptional mode *)
+
+(* Modes *)
+sort 𝔐 ()
+constructor 𝓔 () () : 𝔐 (* exceptional *)
+constructor 𝓟 () () : 𝔐 (* pure *)
+
+(* Judgment forms *)
+sort Ty (m : 𝔐)
+sort Tm (m : 𝔐, A : Ty(m))
+
+sort Ex ()
+constructor err () () : Ex
+constructor raise (A : Ty(𝓔)) (e : Ex) : Tm(𝓔, A)
+constructor raiseTy () (e : Ex) : Ty(𝓔)
+
+
+(* □ injects the exceptional world into the pure world:
+   Tm(𝓔, A) is a retract of Tm(𝓟, □(A)) *)
+constructor □ () (A : Ty(𝓔)) : Ty(𝓟)
+constructor box (A : Ty(𝓔)) (t : Tm(𝓔, A)) : Tm(𝓟, □(A))
+destructor unbox (A : Ty(𝓔)) [t : Tm(𝓟, □(A))] () : Tm(𝓔, A)
+equation unbox(box(t)) --> t
+
+(* note that adding a symmetric operator going in the
+   other direction would render all types in 𝓟 inhabited *)
+
+
+(* Taski-style universe *)
+constructor U (m : 𝔐) () : Ty(m)
+destructor El (m : 𝔐) [A : Tm(m, U)] () : Ty(m)
+
+equation skipcheck El(raise(e)) --> raiseTy(e)
+
+(* Dependent products *)
+constructor Π   (m : 𝔐)
+                (A : Ty(m), B{x : Tm(m, A)} : Ty(m))
+                : Ty(m)
+
+constructor λ   (m : 𝔐, A : Ty(m), B{x : Tm(m, A)} : Ty(m))
+                (t{x : Tm(m, A)} : Tm(m, B{x}))
+                : Tm(m, Π(A, x. B{x}))
+
+destructor ﹫   (m : 𝔐, A : Ty(m), B{x : Tm(m, A)} : Ty(m))
+                [t : Tm(m, Π(A, x. B{x}))]
+                (u : Tm(m, A))
+                : Tm(m, B{u})
+
+equation ﹫(λ(x. t{x}), u) --> t{u}
+
+(* code in U for Π *)
+constructor π (m : 𝔐) (a : Tm(m, U), b{_ : Tm(m, El(a))} : Tm(m, U)) : Tm(m, U)
+equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
+
+(* booleans *)
+constructor Bool (m : 𝔐) () : Ty(m)
+constructor tt (m : 𝔐) () : Tm(m, Bool)
+constructor ff (m : 𝔐) () : Tm(m, Bool)
+
+(* we have three eliminators:
+  - if𝓟 for going from 𝓟 to any
+  - if𝓔 for going from 𝓔 to 𝓔
+  - catchBool for going from 𝓔 to any *)
+
+destructor if𝓟 () [x : Tm(𝓟, Bool)]
+                  (m : 𝔐,
+                   P{x : Tm(𝓟, Bool)} : Ty(m),
+                   a : Tm(m, P{tt}),
+                   b : Tm(m, P{ff})) : Tm(m, P{x})
+
+equation skipcheck if𝓟(tt, m, x.P{x}, a, b) --> a
+equation skipcheck if𝓟(ff, m, x.P{x}, a, b) --> b
+
+
+destructor if𝓔 () [x : Tm(𝓔, Bool)]
+                  (P{x : Tm(𝓔, Bool)} : Ty(𝓔),
+                   a : Tm(𝓔, P{tt}),
+                   b : Tm(𝓔, P{ff})) : Tm(𝓔, P{x})
+
+equation skipcheck if𝓔(tt, x.P{x}, a, b) --> a
+equation skipcheck if𝓔(ff, x.P{x}, a, b) --> b
+equation skipcheck if𝓔(raise(e), x.P{x}, a, b) --> raise(e)
+
+
+destructor catchBool () [x : Tm(𝓔, Bool)]
+                     (m : 𝔐,
+                      P{x : Tm(𝓔, Bool)} : Ty(m),
+                      a : Tm(m, P{tt}),
+                      b : Tm(m, P{ff}),
+                      perr{e : Ex} : Tm(m, P{raise(e)}))
+                      : Tm(m, P{x})
+
+equation skipcheck catchBool(tt, m, x.P{x}, a, b, e. perr{e}) --> a
+equation skipcheck catchBool(ff, m, x.P{x}, a, b, e. perr{e}) --> b
+equation skipcheck catchBool(raise(e), m, x.P{x}, a, b, e. perr{e}) --> perr{e}
+
+
+constructor bool (m : 𝔐) () : Tm(m, U)
+equation El(bool) --> Bool

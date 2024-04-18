@@ -22,7 +22,7 @@ Once all the dependencies are installed it suffices to run `make mltt` (or `make
 
 ## How to use
 
-This project implements the generic bidirectional typing algorithm proposed in [1]. Therefore, when using it one first specifies a type theory to work in and then writes terms inside this theory, which are typechecked by the implementation. In order for the typechecker to be sound the specified theory must be *valid* (see the definition in [1]), an assumption that is also checked automatically by the implementation.
+This project implements the generic bidirectional typing algorithm proposed in [1]. Therefore, when using it one first specifies a type theory to work in and then writes terms inside this theory, which are typechecked by the implementation. In order for the typechecker to be sound the specified theory must be *valid* (see the definition in [1]), a condition that the implementation tries to check automatically.
 
 ### Specifying theories
 
@@ -101,7 +101,7 @@ For instance, we can add $\beta$-reduction with the following rule.
 equation ﹫(λ(x. t{x}), u) --> t{u}
 ```
 
-In order for the rule to be accepted, the implementation checks that it is well-typed, ensuring that it preserves typing (we refer to [1] for all the details). In order to do this, the checker tries to guess the rule metavariable context. If you are getting weird error messages, try to specify the context explicitly (see the file `ott.bitts` for an example of this). This check can also be skipped with the `skipcheck` keyword, by writing `equation skipcheck lhs --> rhs`.
+In order for the rule to be accepted, the implementation tries to check that it preserves typing. Still, in many cases the automatic checker is not able to conclude by itself. If you are getting weird error messages, you can try to specify the metavariable context explicitly (see the file `ott.bitts` for an example of this). Otherwise, the check can also be skipped with the `skipcheck` keyword, by writing `equation skipcheck lhs --> rhs`. It is then the responsibility of the user to verify manually that the rule preserves typing.
 
 
 
@@ -153,6 +153,11 @@ We provide the following examples of theories in the directory `examples/`:
 
 - `ott.bitts` and `ott-2.bitts` : Two variants of Observational Type Theory, with an heterogeneous equality and a Tarski-style universe, or with an homogeneous equality and a type-in-type Coquand-style universe. As an example, we given the definition of natural numbers in terms of W-types and derive its eliminator.
 
+- `exceptional.bitts` : A variant of Pédrot & Tabarau's Exceptional Type Theory.
+
+- `exceptional-multiverse.bitts` : A theory inspired by Maillard et al's Multiverse Type Theory (MuTT), which combines a pure type theory with an exceptional one.
+
+- `lambda-mu.bitts` : A variant of the λμ-caculus, an extension of the λ-calculus with control operators and which captures classical logic. As an example, we give a proof of Pierce's law.
 
 - `big-numbers.bitts` : Excerpt of `mltt.bitts` used to test the performance of the evaluator, computes factorial of 8 in around half a second in the tested machine.
 

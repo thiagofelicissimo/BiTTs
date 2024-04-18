@@ -1,0 +1,169 @@
+
+(* MLTT with a Taski-style universe *)
+
+(* Judgment forms *)
+sort Ty ()
+sort Tm (A : Ty)
+
+
+(* Taski-style universe *)
+constructor U () () : Ty
+destructor El () [A : Tm(U)] () : Ty
+
+
+(* Dependent products *)
+constructor Π   ()
+                (A : Ty, B{x : Tm(A)} : Ty)
+                : Ty
+
+constructor λ   (A : Ty, B{x : Tm(A)} : Ty)
+                (t{x : Tm(A)} : Tm(B{x}))
+                : Tm(Π(A, x. B{x}))
+
+destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
+                [t : Tm(Π(A, x. B{x}))]
+                (u : Tm(A))
+                : Tm(B{u})
+
+equation ﹫(λ(x. t{x}), u) --> t{u}
+
+(* code in U for Π *)
+constructor π () (a : Tm(U), b{_ : Tm(El(a))} : Tm(U)) : Tm(U)
+equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
+
+(* (Positive) Dependent sums *)
+constructor Σ () (A : Ty, B{x : Tm(A)} : Ty) : Ty
+
+constructor mkΣ     (A : Ty, B{x : Tm(A)} : Ty)
+                    (t : Tm(A), u : Tm(B{t}))
+                    : Tm(Σ(A, x. B{x}))
+
+destructor indΣ (A : Ty, B{x : Tm(A)} : Ty)
+                [t : Tm(Σ(A, x. B{x}))]
+                (P {x : Tm(Σ(A, x. B{x}))} : Ty,
+                 p {a : Tm(A), b : Tm(B{a})} : Tm(P{mkΣ(a,b)}))
+            : Tm(P{t})
+
+equation indΣ(mkΣ(t, u), x. P{x}, a b. p{a, b}) --> p{t, u}
+
+(* code in U for Σ *)
+constructor σ () (a : Tm(U), b{x : Tm(El(a))} : Tm(U)) : Tm(U)
+equation El(σ(a, x.b{x})) --> Σ(El(a), x. El(b{x}))
+
+(* Natural numbers *)
+constructor ℕ () () : Ty
+constructor 0 () () : Tm(ℕ)
+constructor S () (n : Tm(ℕ)) : Tm(ℕ)
+
+destructor ind_ℕ    ()
+                    [n : Tm(ℕ)]
+                    (P {x : Tm(ℕ)} : Ty,
+                     p0 : Tm(P{0}),
+                     ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}))
+                (* ------------ *)
+                    : Tm(P{n})
+
+equation ind_ℕ(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+equation ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
+    ps{n, ind_ℕ(n, x. P{x}, p0, n pn. ps{n, pn})}
+
+(* code in U for ℕ *)
+constructor nat () () : Tm(U)
+equation El(nat) --> ℕ
+
+
+constructor Bool () () : Ty
+constructor tt () () : Tm(Bool)
+constructor ff () () : Tm(Bool)
+
+destructor if () [x : Tm(Bool)]
+                 (P{x : Tm(Bool)} : Ty,
+                  a : Tm(P{tt}),
+                  b : Tm(P{ff})) : Tm(P{x})
+equation if(tt, x.P{x}, a, b) --> a
+equation if(ff, x.P{x}, a, b) --> b
+
+constructor bool () () : Tm(U)
+equation El(bool) --> Bool
+
+
+constructor ⊥ () () : Ty
+destructor ind_⊥ () [x : Tm(⊥)] (P : Ty) : Tm(P)
+
+constructor ⊥c () () : Tm(U)
+equation El(⊥c) --> ⊥
+
+
+(* exceptional part *)
+
+sort Ex ()
+constructor err () () : Ex
+
+(* these make the theory inconsistent, however as explained by
+   Pédrot & Tabareau it is possible to define an additional
+   parametricity condition, which then restores consistency *)
+constructor raise (A : Ty) (e : Ex) : Tm(A)
+constructor raiseTy () (e : Ex) : Ty
+
+equation skipcheck El(raise(e)) --> raiseTy(e)
+
+equation skipcheck ﹫(raise(e), u) --> raise(e)
+
+equation skipcheck indΣ(raise(e), x. P{x}, a b. p{a, b}) --> raise(e)
+
+equation skipcheck ind_ℕ(raise(e), x. P{x}, p0, n pn. ps{n, pn}) --> raise(e)
+
+equation skipcheck if(raise(e), x.P{x}, a, b) --> raise(e)
+
+equation skipcheck ind_⊥(raise(e), P) --> raise(e)
+
+(* catch destructors *)
+
+destructor catchℕ  ()
+                    [n : Tm(ℕ)]
+                    (P {x : Tm(ℕ)} : Ty,
+                     p0 : Tm(P{0}),
+                     ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}),
+                     perr {e : Ex} : Tm(P{raise(e)}))
+                (* ------------ *)
+                    : Tm(P{n})
+
+equation catchℕ(0       , x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'}) --> p0
+equation catchℕ(S(n)    , x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'}) -->
+    ps{n, catchℕ(n, x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'})}
+equation skipcheck
+    catchℕ(raise(e), x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'}) --> perr{e}
+
+
+destructor catchΣ (A : Ty, B{x : Tm(A)} : Ty)
+        [t : Tm(Σ(A, x. B{x}))]
+        (P {x : Tm(Σ(A, x. B{x}))} : Ty,
+         p {a : Tm(A), b : Tm(B{a})} : Tm(P{mkΣ(a,b)}),
+         per {e : Ex} : Tm(P{raise(e)}))
+    : Tm(P{t})
+
+equation
+    catchΣ(mkΣ(t, u), x. P{x}, a b. p{a, b}, e. per{e}) --> p{t, u}
+equation skipcheck
+    catchΣ(raise(e), x. P{x}, a b. p{a, b}, e. per{e}) --> per{e}
+
+
+(* detects if a natural number is an exception *)
+
+let isℕ (t : Tm(ℕ)) : Tm(Bool)
+    := catchℕ(t, _. Bool, tt, _ p. p, _. ff)
+
+let neg (A : Ty) : Ty := Π(A, _. ⊥)
+
+(* realizer for independence of premise, from Pédrot & Tabareau's paper *)
+
+let ip (A : Ty, B {x : Tm(ℕ)} : Ty,
+        f : Tm(Π(neg(A), _. Σ(ℕ, n. B{n}))))
+        : Tm(Σ(ℕ, n. Π(neg(A), _. B{n})))
+    :=
+    let resultTy : Ty := Σ(ℕ, n. Π(neg(A), _. B{n})) in
+    let dummy : Tm(resultTy) := mkΣ(0, λ(_. raise(err))) in
+    let p := ﹫(f, raise(err)) in
+    catchΣ(p, _. resultTy,
+        a b. if(isℕ(a), _. resultTy, mkΣ(a, λ(_. b)), dummy), _. dummy)
+

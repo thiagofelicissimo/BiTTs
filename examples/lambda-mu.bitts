@@ -1,0 +1,30 @@
+(* A variant of the λμ-caculus *)
+
+
+sort Ty ()
+sort Tm (A : Ty)
+
+constructor → () (A : Ty, B : Ty) : Ty
+constructor λ (A : Ty, B : Ty) (t{x : Tm(A)} : Tm(B)) : Tm(→(A, B))
+destructor ﹫ (A : Ty, B : Ty) [t : Tm(→(A, B))] (u : Tm(A)) : Tm(B)
+equation ﹫(λ(x. t{x}), u) --> t{u}
+
+
+sort Addr (A : Ty)
+constructor ⊥ () (): Ty
+
+constructor μ (A : Ty) (t{x : Addr(A)} : Tm(⊥)) : Tm(A)
+constructor concat (A : Ty, B : Ty) (a : Addr(B), t : Tm(A)) : Addr(→(A, B))
+destructor send (A : Ty) [a : Addr(A)] (t : Tm(A)) : Tm(⊥)
+
+equation skipcheck
+    send(concat(a, u), t) --> send(a, ﹫(t, u))
+
+equation skipcheck
+    ﹫(μ(a. t{a}), u) --> μ(a. t{concat(a, u)})
+
+let pierce (P : Ty, Q : Ty) : Tm(→(→(→(P, Q), P), P))
+    := λ(f. μ(a. send(a, ﹫(f, λ(p. μ(_. send(a, p)))))))
+
+
+(* equation send(a, μ(x. t{x})) --> t{a} *)

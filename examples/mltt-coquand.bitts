@@ -10,14 +10,13 @@ sort Tm (l : Lvl, A : Ty(l))
 
 
 
-(* Coquand-style Universes: Tm(U(l)) ≃ Ty(l) *)
+(* (Weak) Coquand-style Universes: Ty(l) is a retract of Tm(U(l)) *)
 constructor U (l : Lvl) () : Ty(Sₗ(l))
 constructor c (l : Lvl) (A : Ty(l)) : Tm(Sₗ(l), U)
 destructor El (l : Lvl) [t : Tm(Sₗ(l), U)] () : Ty(l)
 equation El(c(A)) --> A
 
-
-(* Cumulativity: Tm(Sₗ(l), ↑(A)) ≃ Tm(l, A) *)
+(* (Weak) Cumulativity: Tm(l, A) is a retract of Tm(Sₗ(l), ↑(A)) *)
 constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(Sₗ(l))
 constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(Sₗ(l), ↑(A))
 destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(Sₗ(l), ↑(A))] () : Tm(l, A)

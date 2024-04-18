@@ -20,8 +20,8 @@ destructor El (l : Lvl) [A : Tm(U(l))] () : Ty
 constructor 𝑢 () (l : Lvl) (Sₗ(l) / l : Lvl) : Tm(U(l))
 equation El(𝑢(l)) --> U(l)
 
-constructor ↑ () (i : Lvl, a : Tm(U(i))) (Sₗ(i) / j : Lvl) : Tm(U(j))
-equation El(↑(i, a)) --> El(a)
+constructor ↑ (i : Lvl) (a : Tm(U(i))) : Tm(U(Sₗ(i)))
+equation skipcheck El(↑(a)) --> El(a)
 
 
 (* Dependent products *)
@@ -48,11 +48,11 @@ constructor π(i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
 equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
 (* some authors consider a stronger form of cumulativity in which we have
-   ↑(i, π(a, x.b{x})) = π(↑(i, a), x.↑(i, b{x})). we unfortunately cannot have
+   ↑(π(a, x.b{x})) = π(↑(a), x. ↑(b{x})). we unfortunately cannot have
    it here because ↑ and π are both constructors, and therefore cannot be the head
    of a rewrite rule. note that we could also declare ↑ as a destructor, allowing
-   us to have the rule ↑(i, π(a, x.b{x})) --> π(↑(i, a),x.↑(b{i, x})). however, in
-   this case the rule El(↑(i, a)) --> El(a) would not be valid anymore *)
+   us to have the rule ↑(π(a, x.b{x})) --> π(↑(a),x.↑(b{x})). however, in
+   this case the rule El(↑(a)) --> El(a) would not be valid anymore *)
 
 
 (* Natural numbers *)
@@ -89,7 +89,7 @@ equation inst(Λ(i. t{i}), l) --> t{l}
 
 (* universe polymorphic id function *)
 (* the sort is convertible to Tm(∀(i. Π(U(i), a. Π(El(a), _. El(a))))) *)
-let id_poly : Tm(∀(i. El(π(𝑢(i), a. ↑(i, π(a, _. a))) :: Tm(U(Sₗ(i))))))
+let id_poly : Tm(∀(i. El(π(𝑢(i), a. ↑(π(a, _. a))) :: Tm(U(Sₗ(i))))))
   :=  Λ(i. λ(a. λ(x. x)))
 
 (* applying it to 0 *)
