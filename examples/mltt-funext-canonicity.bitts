@@ -74,12 +74,8 @@ destructor  J   () [A : Ty]
                  p : Tm(P{x, refl}))
             : Tm(P{y, e})
 
-(* a consequence of this is that we need to linearize the following rule.
-   therefore, the lhs is not well-typed and so this rule is technically
-   not well-typed in our sense. nevertheless, it preserves typing because
-   for each well-typed instance of the lhs we will have x and x' convertible.
-   therefore, it is still safe to add it. the skipcheck keyword allows us
-   to then skip the subject reduction check *)
+(* a consequence of this is that we need to linearize the following rule,
+   whose well-typedness now cannot be checked automatically by the implementation *)
 equation skipcheck
     J(A, x, x', refl, x e.P{x, e}, p) --> p
 
@@ -247,9 +243,7 @@ let rhs (A : Ty, x : Tm(A), y : Tm(A),
         : Tm( P{y, mk(e)})
     := cast(P{x, refl}, P{y, mk(e)}, eqJ(A, x, y, e, x p. P{x, p}), p)
 
-(* once again, this rewrite rule preserves typing but is not
-   technically well-typed according to our definitions. it is
-   still safe to use, but we need to skip the subject reduction check *)
+(* once again, this rewrite rule cannot be checked automatically by our implementation *)
 equation skipcheck
     J(A, x, y, mk(e), x e.P{x, e}, p) --> rhs(A, x, y, e, x e. P{x, e}, p)
 
