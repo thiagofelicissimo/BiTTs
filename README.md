@@ -151,7 +151,7 @@ We provide the following examples of theories in the directory `examples/`:
 - `mltt-tarski.bitts` and `mltt-coquand.bitts` : Martin-Lof Type Theory with an hierarchy of (weak) cumulative Tarski- and Coquand-style universes and universe polymorphism, with Π types and natural numbers. As an example of term we can write in this theory, we give the universe-polymorphic identity function.
 
 
-- `ott.bitts` and `ott-2.bitts` : Two variants of Observational Type Theory, with an heterogeneous equality and a Tarski-style universe, or with an homogeneous equality and a type-in-type Coquand-style universe. As an example, we given the definition of natural numbers in terms of W-types and derive its eliminator.
+- `ott.bitts` and `ott-2.bitts` : Two variants of McBride & Altenkirch's Observational Type Theory, with an heterogeneous equality and a Tarski-style universe, or with an homogeneous equality and a type-in-type Coquand-style universe. As an example, we given the definition of natural numbers in terms of W-types and derive its eliminator.
 
 - `exceptional.bitts` : A variant of Pédrot & Tabarau's Exceptional Type Theory.
 
