@@ -121,7 +121,7 @@ let handle_entry entry =
       with T.Do_not_unify -> ()
       ) rews;
 
-    if skip_check then Format.printf "%s " (yellow "skiping check")
+    if skip_check then Format.printf "%s " (yellow "skipping check")
     else R.rewrite_rule_checker mctx name mscope (C.scope_msubst msubst mscope []) rhs';
 
     T.rew_rules := T.RewTbl.add name ((p_msubst, rhs') :: rews) !T.rew_rules;
