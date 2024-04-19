@@ -59,7 +59,7 @@ equation ℕ_ind(S(n), i, x. P{x}, p0, n pn. ps{n, pn}) -->
 sort Tyω ()
 sort Tmω (A : Tyω)
 
-(* Tmω(↑ω(l, A)) ≃ Tm(l, A) *)
+(* Tm(l, A) is a retract of Tmω(↑ω(l, A)) *)
 constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
 constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
 destructor  unboxω (l : Lvl, A : Ty(l)) [t : Tmω(↑ω(l, A))] () : Tm(l, A)

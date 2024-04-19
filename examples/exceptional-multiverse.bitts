@@ -1,6 +1,6 @@
 
-(* A theory inspired by Maillard et al's Multiverse Type Theory (MuTT),
-   with a pure and an exceptional mode *)
+(* A theory combining a pure type theory with an exceptional one,
+   inspired by Maillard et al's Multiverse Type Theory (MuTT). *)
 
 (* Modes *)
 sort 𝔐 ()
@@ -49,6 +49,8 @@ destructor ﹫   (m : 𝔐, A : Ty(m), B{x : Tm(m, A)} : Ty(m))
                 : Tm(m, B{u})
 
 equation ﹫(λ(x. t{x}), u) --> t{u}
+
+equation skipcheck ﹫(raise(e), u) --> raise(e)
 
 (* code in U for Π *)
 constructor π (m : 𝔐) (a : Tm(m, U), b{_ : Tm(m, El(a))} : Tm(m, U)) : Tm(m, U)
