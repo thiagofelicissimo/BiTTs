@@ -10,7 +10,7 @@ exception Match_failure
 let rec match_tm (p_tm : p_tm) (v_tm : v_tm) : v_msubst =
   match p_tm, v_tm with
   | Meta, _ -> [Value(v_tm)]
-  | Const(c, p_msubst), Const(c', msubst) when c = c' -> match_msubst p_msubst msubst
+  | Sym(c, p_msubst), Sym(c', msubst) when c = c' -> match_msubst p_msubst msubst
   | _ -> raise Match_failure
 
 and match_msubst (p_msubst : p_msubst) (v_msubst : v_msubst) : v_msubst =
@@ -49,19 +49,18 @@ let rec eval_tm (t : tm) (meta_offset : int) (v_msubst : v_msubst) (v_subst : v_
     let body = (DefTbl.find d !defs).tm in
     let v_msubst' = eval_msubst msubst meta_offset v_msubst v_subst in
     eval_tm body 0 v_msubst' []
-  | Const(c, msubst) -> Const(c, eval_msubst msubst meta_offset v_msubst v_subst)
-  | Dest(d, msubst') ->
+  | Sym(d, msubst') ->
     begin
       let v_msubst' = eval_msubst msubst' meta_offset v_msubst v_subst in
       let args =  v_msubst' in
-      let try_match (p_msubst, r) =
+      let try_match (_, p_msubst, r) =
         try
           let result = match_msubst p_msubst args in
           raise (Matched(result,r))
         with Match_failure -> () in
       try
         List.iter try_match (try RewTbl.find d !rew_rules with _ -> []);
-        Dest(d, v_msubst')
+        Sym(d, v_msubst')
       with Matched(result, r) -> eval_tm r meta_offset result []
     end
 
@@ -97,9 +96,7 @@ let rec equal_tm (v_t : v_tm) (v_t' : v_tm) (depth : int) : unit =
   (* Format.printf "checking if %a is equal to %a@." pp_term (read_back_tm depth v_t) pp_term (read_back_tm depth v_t'); *)
   match v_t, v_t' with
   | Var(n), Var(m) when n = m -> ()
-  | Const(c, v_msubst), Const(c', v_msubst') when c = c' ->
-    equal_msubst v_msubst v_msubst' depth
-  | Dest(d, v_msubst), Dest(d', v_msubst') when d = d' ->
+  | Sym(c, v_msubst), Sym(c', v_msubst') when c = c' ->
     equal_msubst v_msubst v_msubst' depth
   | Meta(n, v_subst), Meta(n', v_subst') when n = n' ->
     equal_subst v_subst v_subst' depth
@@ -131,8 +128,7 @@ and equal_msubst (v_msubst : v_msubst) (v_msubst' : v_msubst) (depth : int) : un
 and read_back_tm (depth : int) (t : v_tm) : tm =
   match t with
   | Var(i) -> Var(depth - (i + 1))
-  | Dest(name, msubst) -> Dest(name, read_back_msubst depth msubst)
-  | Const(name, msubst) -> Const(name, read_back_msubst depth msubst)
+  | Sym(name, msubst) -> Sym(name, read_back_msubst depth msubst)
   | Meta(n, subst) -> Meta(n, read_back_subst depth subst)
 
 and read_back_subst  (depth : int) (subst : v_subst) : subst =

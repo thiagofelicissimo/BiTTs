@@ -10,6 +10,7 @@ constructor U () () : Ty
 constructor c () (A : Ty) : Tm(U)
 destructor El () [a : Tm(U)] () : Ty
 equation El(c(A)) --> A
+equation c(El(A)) --> A
 
 
 (* Dependent products *)
@@ -81,8 +82,9 @@ equation if(false, x.P{x}, a, b) --> b
 
 constructor Eq () (A : Ty, a : Tm(A), b : Tm(A)) : Ty
 
-constructor refl (A : Ty, a : Tm(A)) ()
-                 (a / b : Tm(A)) : Tm(Eq(A, a, b))
+constructor refl (A : Ty, a : Tm(A), b : Tm(A)) ()
+                 (a = b : Tm(A))
+                 : Tm(Eq(A, a, b))
 
 destructor cast () [A : Ty] (B : Ty, e : Tm(Eq(U, c(A), c(B))), t : Tm(A)) : Tm(B)
 
@@ -215,36 +217,24 @@ destructor EqUWW_e2  (A  : Ty, B {x  : Tm(A )} : Ty,
     and in the following we will not need all of them *)
 
 
-equation   (A : Ty, B{x : Tm(A)} : Ty, A' : Ty, B'{x' : Tm(A')} : Ty,
-            e : Tm(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'})))),
-            t : Tm(Π(A, x.B{x})))
-
-    cast(Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
+equation cast(Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
     -->  λ(x'.
             let x := cast(A', A, sym(EqUΠΠ_e1(e)), x') in
             cast(B{x}, B'{x'}, EqUΠΠ_e2(e, x'), ﹫(t, x)))
 
-equation   (A : Ty, B{x : Tm(A)} : Ty, A' : Ty, B'{x' : Tm(A')} : Ty,
-            e : Tm(Eq(U, c(W(A, x.B{x})), c(W(A', x'.B'{x'})))),
-            t : Tm(A), u : Tm(Π(B{t}, _. W(A, x.B{x}))))
-
-    cast(W(A, x. B{x}), W(A', x'. B'{x'}), e, sup(t, u))
+equation cast(W(A, x. B{x}), W(A', x'. B'{x'}), e, sup(t, u))
     --> let t' := cast(A, A', EqUWW_e1(e), t) in
         sup(t', λ(x'.
             let x := cast(B'{t'}, B{t}, EqUWW_e2(e, t), x') in
             cast(W(A, x.B{x}) :: Ty, W(A', x'. B'{x'}), e, ﹫(u, x))))
 
-equation (e : Tm(Eq(U, c(𝔹), c(𝔹))), t : Tm(𝔹))
-    cast(𝔹, 𝔹, e, t) --> t
+equation cast(𝔹, 𝔹, e, t) --> t
 
-equation (e : Tm(Eq(U, c(⋆), c(⋆))), t : Tm(⋆))
-    cast(⋆, ⋆, e, t) --> t
+equation cast(⋆, ⋆, e, t) --> t
 
-equation (e : Tm(Eq(U, c(∅), c(∅))), t : Tm(∅))
-    cast(∅, ∅, e, t) --> t
+equation cast(∅, ∅, e, t) --> t
 
-equation (e : Tm(Eq(U, c(U), c(U))), t : Tm(U))
-    cast(U, U, e, t) --> t
+equation cast(U, U, e, t) --> t
 
 (* coherence of cast *)
 destructor castEq (A : Ty) [t : Tm(A)] (e : Tm(Eq(U, c(A), c(A))))

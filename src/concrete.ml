@@ -23,11 +23,11 @@ type imctx = (string * tm * tm) list
 type entry =
   | Let of string * mctx * tm * tm
   | Sort of string * mctx
-  | Cons of string * mctx * mctx * imctx * tm
-    (* c (Xi_p; Xi_c; Vi/Xi_i) : T *)
-  | Dest of string * mctx * string * tm * mctx * tm
-    (* d (Xi_pi; x : T; Xi_d) : U *)
-  | Rew of bool (* if true, skip check *) * mctx option * tm * tm
+  | Cons of string * mctx * mctx * subst   * subst   * ctx option * tm
+    (*      c       (Xi_1) (Xi_2) (\vec{t} = \vec{u}) (Delta) :     T *)
+  | Dest of string * mctx * string * tm * mctx  * tm
+    (*      d       (Xi_1) (x :      T)  (Xi_2) : U *)
+  | Rew of tm * tm
   | Eval of tm
   | Eq of tm * tm
 
@@ -63,7 +63,7 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
     | Some i, _ -> T.Var(i)
     | None, None ->
       begin match T.RuleTbl.find_opt name !T.schem_rules with
-      | Some _ -> T.Const(name, [])
+      | Some _ -> T.Sym(name, [])
       | None ->
         if (T.DefTbl.find_opt name !T.defs) <> None
         then T.Def(name, [])
@@ -74,8 +74,7 @@ let rec scope_tm (t : tm) (mscope : string list) (scope : string list) : T.tm =
     | Some i -> T.Meta(i, scope_subst subst mscope scope) end
   | Symb(name, msubst) ->
     begin match T.RuleTbl.find_opt name !T.schem_rules with
-    | Some(Const(_)) | Some(Sort(_)) -> T.Const(name, scope_msubst msubst mscope scope)
-    | Some(Dest(_)) -> T.Dest(name, scope_msubst msubst mscope scope)
+    | Some(_) -> T.Sym(name, scope_msubst msubst mscope scope)
     | None ->
       if (T.DefTbl.find_opt name !T.defs) <> None
         then T.Def(name, scope_msubst msubst mscope scope)
@@ -116,15 +115,11 @@ let rec scope_p_tm (t : tm) : T.p_tm * string list =
   match t with
   | NotApplied(name) ->
     begin match T.RuleTbl.find_opt name !T.schem_rules with
-    | Some Const(_) | Some Sort(_) -> T.Const(name, []), []
-    | Some Dest(_) -> raise Not_a_patt
+    | Some _ -> T.Sym(name, []), []
     | None -> Meta, [name] end
   | Symb(name, msubst) ->
-    begin match T.RuleTbl.find_opt name !T.schem_rules with
-    | Some Const(_) | Some Sort(_) ->
-      let msubst_p, mscope = scope_p_msubst msubst in
-      T.Const(name, msubst_p), mscope
-    | _ -> raise Not_a_patt end
+    let msubst_p, mscope = scope_p_msubst msubst in
+    T.Sym(name, msubst_p), mscope
   | _ -> raise Not_a_patt
 
 and scope_p_msubst (msubst : msubst) : T.p_msubst * string list =
@@ -199,16 +194,22 @@ let pp_imctx fmt imctx =
 let pp_entry fmt entry =
   match entry with
   | Sort(name, mctx) -> fprintf fmt "sort %s (%a)@." name pp_mctx mctx
-  | Cons(name, mctx1, mctx2, imctx, ty) ->
-    fprintf fmt "constructor %s (%a) (%a) (%a) : %a@."
-      name pp_mctx mctx1 pp_mctx mctx2 pp_imctx imctx pp_term ty
+  | Cons(name, mctx1, mctx2, [], [], None, ty)
+  | Cons(name, mctx1, mctx2, [], [], Some [], ty) ->
+    fprintf fmt "constructor %s (%a) (%a) : %a@."
+      name pp_mctx mctx1 pp_mctx mctx2 pp_term ty
+  | Cons(name, mctx1, mctx2, subst1, subst2, None, ty) ->
+    fprintf fmt "constructor %s (%a) (%a) (%a = %a) : %a@."
+      name pp_mctx mctx1 pp_mctx mctx2 pp_subst subst1 pp_subst subst2 pp_term ty
+  | Cons(name, mctx1, mctx2, subst1, subst2, Some(ctx), ty) ->
+    fprintf fmt "constructor %s (%a) (%a) (%a = %a) (%a) : %a@."
+      name pp_mctx mctx1 pp_mctx mctx2
+      pp_subst subst1 pp_subst subst2 pp_ctx ctx pp_term ty
   | Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) ->
     fprintf fmt "destructor %s (%a) (%s : %a) (%a) : %a@."
     name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty
-  | Rew(_, None, lhs, rhs) ->
+  | Rew(lhs, rhs) ->
     fprintf fmt "rewrite %a --> %a@." pp_term lhs pp_term rhs
-  | Rew(_, Some mctx, lhs, rhs) ->
-    fprintf fmt "rewrite (%a) %a --> %a@." pp_mctx mctx pp_term lhs pp_term rhs
   | Let(name, mctx, ty, t) ->
     fprintf fmt "let %s (%a) : %a := %a@." name pp_mctx mctx pp_term ty pp_term t
   | Eval(t) -> fprintf fmt "eval %a@." pp_term t

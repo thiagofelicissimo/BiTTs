@@ -1,5 +1,5 @@
 
-(* MLTT with a hierarchy of cumulative Coquand-style universes, and universe polymorphism *)
+(* MLTT with a hierarchy of cumulative Russell-style universes, and universe polymorphism *)
 
 sort Lvl ()
 constructor 0ₗ () () : Lvl
@@ -8,21 +8,15 @@ constructor Sₗ () (_ : Lvl) : Lvl
 sort Ty (l : Lvl)
 sort Tm (l : Lvl, A : Ty(l))
 
-
-
-(* Coquand-style Universes: Tm(U(l)) ≃ Ty(l) *)
+(* Russel-style Universes: Tm(U(l)) = Ty(l) *)
 constructor U (l : Lvl) () : Ty(Sₗ(l))
-constructor c (l : Lvl) (A : Ty(l)) : Tm(Sₗ(l), U)
-destructor El (l : Lvl) [t : Tm(Sₗ(l), U)] () : Ty(l)
-equation El(c(A)) --> A
-equation c(El(A)) --> A
+equation Tm(Sₗ(l), U) --> Ty(l)
 
-(* Cumulativity: Tm(Sₗ(l), ↑(A)) ≃ Tm(l, A) *)
+
+(* Cumulativity: Tm(Sₗ(l), ↑(A)) = Tm(l, A) *)
 constructor ↑ (l : Lvl) (A : Ty(l)) : Ty(Sₗ(l))
-constructor box (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tm(Sₗ(l), ↑(A))
-destructor unbox (l : Lvl, A : Ty(l)) [t : Tm(Sₗ(l), ↑(A))] () : Tm(l, A)
-equation unbox(box(t)) --> t
-equation box(unbox(t)) --> t
+equation Tm(Sₗ(l), ↑(A)) --> Tm(l, A)
+
 
 (* Dependent products *)
 constructor Π (l : Lvl) (A : Ty(l), B {x : Tm(l, A)} : Ty(l)) : Ty(l)
@@ -35,9 +29,11 @@ equation ﹫(λ(x. t{x}), u) --> t{u}
 
 (* some authors consider a stronger form of cumulativity in which we have
    ↑(Π(A, x.B{x})) = Π(↑(A),x.↑(B{x})). we unfortunately cannot have it here
-   because orienting this equation left-to-right creates an overlap with the
-   sort of box, whereas orienting if right-to-left creates an overlap with
-   the sort of λ, invalidating condition (B) of the definition of valid
+   because orienting this equation left-to-right creates an unjoignable
+   critical pair with Tm(Sₗ(l), ↑(A)) --> Tm(l, A), breaking confluence and
+   invalidating condition (A).(II) of the definition of valid bidirectional
+   theories, whereas orienting it right-to-left creates an overlap with the
+   sort of λ, invalidating condition (B) of the definition of valid
    bidirectional theories *)
 
 (* Natural numbers *)
@@ -63,12 +59,9 @@ equation ℕ_ind(S(n), i, x. P{x}, p0, n pn. ps{n, pn}) -->
 sort Tyω ()
 sort Tmω (A : Tyω)
 
-(* Tmω(↑ω(l, A)) ≃ Tm(l, A) *)
 constructor ↑ω () (l : Lvl, A : Ty(l)) : Tyω
-constructor boxω (l : Lvl, A : Ty(l)) (t : Tm(l, A)) : Tmω(↑ω(l, A))
-destructor  unboxω (l : Lvl, A : Ty(l)) [t : Tmω(↑ω(l, A))] () : Tm(l, A)
-equation unboxω(boxω(t)) --> t
-equation boxω(unboxω(t)) --> t
+equation Tmω(↑ω(l, A)) --> Tm(l, A)
+
 
 (* universe polymorphism (quantification over levels) *)
 constructor ∀ () (A {i : Lvl} : Tyω) : Tyω
@@ -80,9 +73,9 @@ equation inst(Λ(i. t{i}), l) --> t{l}
 
 
 (* universe polymorphic id function *)
-let id_poly : Tmω(∀(i. ↑ω(Sₗ(i), Π(U, a. Π(↑(El(a)), _. ↑(El(a)))))))
-    :=  Λ(i. boxω(λ(a. λ(x. x))))
+let id_poly : Tmω(∀(i. ↑ω(Sₗ(i), Π(U, A. Π(↑(A), _. ↑(A))))))
+    :=  Λ(i. λ(a. λ(x. x)))
 
 (* applying it to 0 *)
-let 0' : Tm(0ₗ, ℕ) := unbox(﹫(﹫(unboxω(inst(id_poly, 0ₗ)), c(ℕ)), box(0)))
+let 0' : Tm(0ₗ, ℕ) := ﹫(﹫(inst(id_poly, 0ₗ), ℕ), 0)
 assert 0' = 0

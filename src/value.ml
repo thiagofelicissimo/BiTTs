@@ -6,8 +6,7 @@ open Format
 type v_tm =
   | Var of int (* level *)
   | Meta of int (* level *) * v_subst
-  | Const of string * v_msubst
-  | Dest of string * v_msubst
+  | Sym of string * v_msubst
 
 and v_subst = v_tm list
 
@@ -26,10 +25,8 @@ let rec pp_vterm fmt t =
   match t with
   | Var(n) -> fprintf fmt "%d" n
   | Meta(n, subst) -> fprintf fmt "%d{%a}" n pp_vsubst subst
-  | Dest(name, []) -> fprintf fmt "%s()" name
-  | Dest(name, msubst) -> fprintf fmt "%s(%a)" name pp_vmsubst msubst
-  | Const(name, []) -> fprintf fmt "%s" name
-  | Const(name, msubst) -> fprintf fmt "%s(%a)" name pp_vmsubst msubst
+  | Sym(name, []) -> fprintf fmt "%s" name
+  | Sym(name, msubst) -> fprintf fmt "%s(%a)" name pp_vmsubst msubst
 
 and pp_vsubst fmt subst =
   pp_print_list ~pp_sep:T.separator pp_vterm fmt (List.rev subst)

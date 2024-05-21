@@ -144,7 +144,11 @@ evaluate ﹫(sum_of_list, 0∷1∷2∷3∷nil)
 (* Equality *)
 constructor Eq () (A : Ty, x : Tm(A), y : Tm(A)) : Ty
 
-constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Tm(Eq(A, x, y))
+constructor refl (A : Ty, x : Tm(A), y : Tm(A)) ()
+                 (x = y : Tm(A))
+                : Tm(Eq(A, x, y))
+
+
 
 destructor J (A : Ty, x : Tm(A), y : Tm(A))
              [t : Tm(Eq(A, x, y))]
@@ -173,10 +177,12 @@ let transp : Tm(Π(U, a. Π(U, b. Π(Eq(U, a, b), _. Π(El(a), _. El(b))))))
 (* Vectors *)
 constructor Vec () (A : Ty, n : Tm(ℕ)) : Ty
 
-constructor nilV (A : Ty) () (0 / n : Tm(ℕ)) : Tm(Vec(A, n))
+constructor nilV (A : Ty, n : Tm(ℕ)) ()
+                 (n = 0 : Tm(ℕ)) : Tm(Vec(A, n))
 
-constructor consV (A : Ty) (m : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, m)))
-                           (S(m) / n : Tm(ℕ)) : Tm(Vec(A, n))
+constructor consV (A : Ty, n : Tm(ℕ))
+                  (m : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, m)))
+                  (n = S(m) : Tm(ℕ)) : Tm(Vec(A, n))
 
 destructor ind_Vec  (A : Ty, n : Tm(ℕ))
                     [l : Tm(Vec(A, n))]
@@ -194,7 +200,6 @@ equation ind_Vec(consV(m, a, l), x y. P{x, y}, p_nil, x y z w. p_cons{x, y, z, w
 
 constructor vec () (a : Tm(U), n : Tm(ℕ)) : Tm(U)
 equation El(vec(a, n)) --> Vec(El(a), n)
-
 
 let 2∷1∷0∷nil : Tm(Vec(ℕ, S(S(S(0))))) := consV(S(S(0)), S(S(0)), consV(S(0), S(0), consV(0, 0, nilV)))
 

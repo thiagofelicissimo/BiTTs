@@ -17,11 +17,11 @@ destructor El (l : Lvl) [A : Tm(U(l))] () : Ty
 (* we must declare the level l as an index, otherwise l is omitted from the
    syntax and we cannot write the rule  El(𝑢) --> U(?) because we don't know
    what to put in the place of ? *)
-constructor 𝑢 () (l : Lvl) (Sₗ(l) / l : Lvl) : Tm(U(l))
+constructor 𝑢 (i : Lvl) (l : Lvl) (i = Sₗ(l) : Lvl) : Tm(U(i))
 equation El(𝑢(l)) --> U(l)
 
 constructor ↑ (i : Lvl) (a : Tm(U(i))) : Tm(U(Sₗ(i)))
-equation skipcheck El(↑(a)) --> El(a)
+equation El(↑(a)) --> El(a)
 
 
 (* Dependent products *)
@@ -47,12 +47,7 @@ constructor π(i : Lvl) (a : Tm(U(i)), b{_ : Tm(El(a))} : Tm(U(i))) : Tm(U(i))
 
 equation El(π(a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
-(* some authors consider a stronger form of cumulativity in which we have
-   ↑(π(a, x.b{x})) = π(↑(a), x. ↑(b{x})). we unfortunately cannot have
-   it here because ↑ and π are both constructors, and therefore cannot be the head
-   of a rewrite rule. note that we could also declare ↑ as a destructor, allowing
-   us to have the rule ↑(π(a, x.b{x})) --> π(↑(a),x.↑(b{x})). however, in
-   this case the rule El(↑(a)) --> El(a) would not be valid anymore *)
+equation ↑(π(a, x.b{x})) --> π(↑(a), x. ↑(b{x}))
 
 
 (* Natural numbers *)
@@ -73,7 +68,7 @@ equation ind_ℕ(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
     ps{n, ind_ℕ(n, x. P{x}, p0, n pn. ps{n, pn})}
 
 (* code in U for ℕ *)
-constructor nat () () (0ₗ / i : Lvl) : Tm(U(i))
+constructor nat () () : Tm(U(0ₗ))
 
 equation El(nat) --> ℕ
 

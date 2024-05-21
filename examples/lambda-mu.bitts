@@ -17,11 +17,9 @@ constructor μ (A : Ty) (t{x : Addr(A)} : Tm(⊥)) : Tm(A)
 constructor ◁ (A : Ty, B : Ty) (a : Addr(B), t : Tm(A)) : Addr(→(A, B))
 destructor send (A : Ty) [a : Addr(A)] (t : Tm(A)) : Tm(⊥)
 
-equation skipcheck
-    send(◁(a, u), t) --> send(a, ﹫(t, u))
+equation send(◁(a, u), t) --> send(a, ﹫(t, u))
 
-equation skipcheck
-    ﹫(μ(a. t{a}), u) --> μ(a. t{◁(a, u)})
+equation ﹫(μ(a. t{a}), u) --> μ(a. t{◁(a, u)})
 
 let pierce (P : Ty, Q : Ty) : Tm(→(→(→(P, Q), P), P))
     := λ(f. μ(a. send(a, ﹫(f, λ(p. μ(_. send(a, p)))))))

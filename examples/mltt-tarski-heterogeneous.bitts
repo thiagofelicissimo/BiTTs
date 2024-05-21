@@ -12,12 +12,9 @@ constructor 0ₗ () () : Lvl
 constructor Sₗ () (_ : Lvl) : Lvl
 destructor maxₗ () [i : Lvl] (j : Lvl) : Lvl
 
-equation (j : Lvl)
-   maxₗ(0ₗ, j) --> j
-equation (i : Lvl)
-   maxₗ(Sₗ(i), 0ₗ) --> Sₗ(i)
-equation (i : Lvl, j : Lvl)
-   maxₗ(Sₗ(i), Sₗ(j)) --> Sₗ(maxₗ(i, j))
+equation maxₗ(0ₗ, j) --> j
+equation maxₗ(i, 0ₗ) --> i
+equation maxₗ(Sₗ(i), Sₗ(j)) --> Sₗ(maxₗ(i, j))
 
 
 (* Taski-style universe *)
@@ -25,10 +22,11 @@ constructor U () (l : Lvl) : Ty
 destructor El (l : Lvl) [A : Tm(U(l))] () : Ty
 
 
-(* we must declare the level l as an index, otherwise l is omitted from the
-   syntax and we cannot write the rule  El(𝑢) --> U(?) because we don't know
-   what to put in the place of ? *)
-constructor 𝑢 () (l : Lvl) (Sₗ(l) / l : Lvl) : Tm(U(l))
+(* we must keep l in the syntax, otherwise we cannot write the rule
+   El(𝑢) --> U(?) because we don't know what to put in the place of ? *)
+constructor 𝑢 (i : Lvl) (l : Lvl)
+              (i = Sₗ(l) : Lvl)
+              : Tm(U(i))
 equation El(𝑢(l)) --> U(l)
 
 
@@ -49,11 +47,11 @@ destructor ﹫   (A : Ty, B{x : Tm(A)} : Ty)
 equation ﹫(λ(x. t{x}), u) --> t{u}
 
 (* in order to allow a and b to live in two different universes, we have to add
-   the level annotations to the syntax unfortunately *)
-constructor π () (i1 : Lvl, i2 : Lvl, a : Tm(U(i1)), b{_ : Tm(El(a))} : Tm(U(i2)))
-              (maxₗ(i1, i2) / i : Lvl) : Tm(U(i))
-equation El(π(i1, i2, a, x.b{x})) --> Π(El(a), x. El(b{x}))
+   level annotations to the syntax unfortunately *)
+constructor π (i : Lvl) (i1 : Lvl, i2 : Lvl, a : Tm(U(i1)), b{_ : Tm(El(a))} : Tm(U(i2)))
+              (i = maxₗ(i1, i2) : Lvl) : Tm(U(i))
 
+equation El(π(i1, i2, a, x.b{x})) --> Π(El(a), x. El(b{x}))
 
 (* Natural numbers *)
 constructor ℕ () () : Ty

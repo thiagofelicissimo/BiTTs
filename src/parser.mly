@@ -4,9 +4,9 @@
 
 %}
 %token EOF
-%token CONS DEST SORT REW LET EVAL ASSERT IN SKIPCHECK
+%token CONS DEST SORT REW LET EVAL ASSERT IN
 %token LPAR RPAR LBRACK RBRACK LSQB RSQB
-%token COLON DOT COMMA REDUCES DEF EQUAL SLASH COCOLON
+%token COLON DOT COMMA REDUCES DEF EQUAL COCOLON
 %token <string> IDENT
 
 %nonassoc IN
@@ -48,7 +48,6 @@ ctx_entry:
 ctx:
   | LBRACK e=separated_list(COMMA, ctx_entry) RBRACK { List.rev e }
 
-
 mctx_entry:
   | id=IDENT COLON ty=term { (id, [], ty) }
   | id=IDENT ctx=ctx COLON ty=term { (id, ctx, ty) }
@@ -56,23 +55,26 @@ mctx_entry:
 mctx:
   | LPAR e=separated_list(COMMA, mctx_entry) RPAR { List.rev e }
 
-imctx_entry:
-  | t=term SLASH id=IDENT COLON ty=term { (id, t, ty) }
-
-imctx:
-  | LPAR e=separated_list(COMMA, imctx_entry) RPAR  { List.rev e }
 
 entry:
   | SORT id=IDENT mctx=mctx { Sort(id, mctx)}
   | CONS id=IDENT mctx1=mctx mctx2=mctx COLON ty=term
-    { Cons(id, mctx1, mctx2, [], ty) }
-  | CONS id=IDENT mctx1=mctx mctx2=mctx imctx=imctx COLON ty=term
-    { Cons(id, mctx1, mctx2, imctx, ty) }
+    { Cons(id, mctx1, mctx2, [], [], Some([]), ty) }
+  | CONS id=IDENT mctx1=mctx mctx2=mctx
+    LPAR subst1=subst EQUAL subst2=subst RPAR
+    COLON ty=term
+    { Cons(id, mctx1, mctx2, subst1, subst2, None, ty) }
+  | CONS id=IDENT mctx1=mctx mctx2=mctx
+    LPAR subst1=subst EQUAL subst2=subst COLON eqty=term RPAR
+    COLON ty=term
+    { Cons(id, mctx1, mctx2, subst1, subst2, Some([("_",eqty)]), ty) }
+  | CONS id=IDENT mctx1=mctx mctx2=mctx
+    LPAR subst1=subst EQUAL subst2=subst COLON ctx=ctx RPAR
+    COLON ty=term
+    { Cons(id, mctx1, mctx2, subst1, subst2, Some(ctx), ty) }
   | DEST id=IDENT mctx1=mctx LSQB id_arg=IDENT COLON ty_arg=term RSQB mctx2=mctx COLON ty=term
     { Dest(id, mctx1, id_arg, ty_arg, mctx2, ty) }
-  | REW SKIPCHECK lhs=term REDUCES rhs=term { Rew(true, None, lhs, rhs) }
-  | REW lhs=term REDUCES rhs=term { Rew(false, None, lhs, rhs) }
-  | REW mctx=mctx lhs=term REDUCES rhs=term { Rew(false, Some(mctx), lhs, rhs) }
+  | REW lhs=term REDUCES rhs=term { Rew(lhs, rhs) }
   | LET id=IDENT COLON ty=term DEF tm=term
     { Let(id, [], ty, tm) }
   | LET id=IDENT mctx=mctx COLON ty=term DEF tm=term

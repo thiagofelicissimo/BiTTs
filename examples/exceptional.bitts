@@ -105,17 +105,17 @@ constructor err () () : Ex
 constructor raise (A : Ty) (e : Ex) : Tm(A)
 constructor raiseTy () (e : Ex) : Ty
 
-equation skipcheck El(raise(e)) --> raiseTy(e)
+equation El(raise(e)) --> raiseTy(e)
 
-equation skipcheck ﹫(raise(e), u) --> raise(e)
+equation ﹫(raise(e), u) --> raise(e)
 
-equation skipcheck indΣ(raise(e), x. P{x}, a b. p{a, b}) --> raise(e)
+equation indΣ(raise(e), x. P{x}, a b. p{a, b}) --> raise(e)
 
-equation skipcheck ind_ℕ(raise(e), x. P{x}, p0, n pn. ps{n, pn}) --> raise(e)
+equation ind_ℕ(raise(e), x. P{x}, p0, n pn. ps{n, pn}) --> raise(e)
 
-equation skipcheck if(raise(e), x.P{x}, a, b) --> raise(e)
+equation if(raise(e), x.P{x}, a, b) --> raise(e)
 
-equation skipcheck ind_⊥(raise(e), P) --> raise(e)
+equation ind_⊥(raise(e), P) --> raise(e)
 
 (* catch destructors *)
 
@@ -131,8 +131,7 @@ destructor catchℕ  ()
 equation catchℕ(0       , x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'}) --> p0
 equation catchℕ(S(n)    , x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'}) -->
     ps{n, catchℕ(n, x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'})}
-equation skipcheck
-    catchℕ(raise(e), x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'}) --> perr{e}
+equation catchℕ(raise(e), x. P{x}, p0, n pn. ps{n, pn}, e'. perr{e'}) --> perr{e}
 
 
 destructor catchΣ (A : Ty, B{x : Tm(A)} : Ty)
@@ -142,10 +141,8 @@ destructor catchΣ (A : Ty, B{x : Tm(A)} : Ty)
          per {e : Ex} : Tm(P{raise(e)}))
     : Tm(P{t})
 
-equation
-    catchΣ(mkΣ(t, u), x. P{x}, a b. p{a, b}, e. per{e}) --> p{t, u}
-equation skipcheck
-    catchΣ(raise(e), x. P{x}, a b. p{a, b}, e. per{e}) --> per{e}
+equation catchΣ(mkΣ(t, u), x. P{x}, a b. p{a, b}, e. per{e}) --> p{t, u}
+equation catchΣ(raise(e), x. P{x}, a b. p{a, b}, e. per{e}) --> per{e}
 
 
 (* detects if a natural number is an exception *)

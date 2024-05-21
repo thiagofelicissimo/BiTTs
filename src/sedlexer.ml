@@ -15,7 +15,6 @@ let keyword_or_ident =
         "let", LET;
         "assert", ASSERT;
         "in", IN;
-        "skipcheck", SKIPCHECK;
         "evaluate", EVAL
     ] ;
   fun s ->
@@ -46,7 +45,6 @@ let rec token lb =
   | "-->" -> REDUCES
   | ":=" -> DEF
   | "=" -> EQUAL
-  | "/" -> SLASH
   | name -> keyword_or_ident (Utf8.lexeme lb)
   | _ -> raise Lexing_error
 and comment next i lb =

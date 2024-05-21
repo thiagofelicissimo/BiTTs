@@ -4,11 +4,9 @@ module T = Term
 module V = Value
 module Ty = Typing
 module E = Eval
-module R = Rewtyping
 open Common
 
-
-exception Overlap_detected
+let rew_count = ref 0
 
 let handle_entry entry =
   match entry with
@@ -22,111 +20,108 @@ let handle_entry entry =
 
     Format.printf "[%s %s] %s@." (darkblue "sort") name (green "OK")
 
-  | C.Cons(name, mctx_pars, mctx_args, imctx, ty) ->
+  | C.Cons(name, mctx1, mctx2, subst1, subst2, ctx, sort) ->
     (* scoping *)
-    let mctx_pars', mscope_pars = C.scope_mctx mctx_pars [] in
-    let mctx_args', mscope_pars_args = C.scope_mctx mctx_args mscope_pars in
-    let inst_msubst = C.scope_msubst (C.msubst_of_imctx imctx) mscope_pars_args [] in
-    let mctx_ixs', mscope_pars_ixs = C.scope_mctx (C.mctx_of_imctx imctx) mscope_pars in
-    let ty_p, ty_scope = C.scope_p_tm ty in
-    assert (mscope_pars_ixs = ty_scope);
-    let ty' = C.scope_tm ty mscope_pars_ixs [] in
+    let mctx1', mscope1 = C.scope_mctx mctx1 [] in
+    let mctx2', mscope12 = C.scope_mctx mctx2 mscope1 in
+    let sort_p, sort_scope = C.scope_p_tm sort in
+    assert (mscope1 = sort_scope);
+    let sort' = C.scope_tm sort mscope1 [] in
+
+    let subst1' = C.scope_subst subst1 mscope12 [] in
+    let subst2' = C.scope_subst subst2 mscope12 [] in
+    let ctx' = Option.map (fun x -> fst (C.scope_ctx x mscope12 )) ctx in
+
+    (* checking that sort_p is rigid and destructor-free *)
+    T.check_dest_free sort_p;
+    T.check_rigid sort_p;
 
     (* typechecking *)
-    Ty.check_mctx (mctx_ixs' @ mctx_pars');
-    Ty.check_mctx (mctx_args' @ mctx_pars');
-    let id_pars = E.eval_msubst (T.gen_id_msubst mctx_pars') 0 [] [] in
-    ignore @@ Ty.check_msubst (mctx_args' @ mctx_pars') [] [] id_pars inst_msubst mctx_ixs';
-    Ty.check_sort (mctx_ixs' @ mctx_pars') [] [] ty';
+    let mctx12' = mctx2' @ mctx1' in
+    Ty.check_mctx mctx12';
+    Ty.check_sort mctx1' [] [] sort';
+    begin match ctx' with
+      | Some ctx ->
+        let _, _ = Ty.check_ctx mctx12' ctx in
+        ignore @@ Ty.check_subst mctx12' 0 [] [] subst1' ctx;
+        ignore @@ Ty.check_subst mctx12' 0 [] [] subst2' ctx;
+        Format.printf "[%s %s] %s@." (darkblue "constructor") name (green "OK");
+
+      | None ->
+        Format.printf "[%s %s] %s@." (darkblue "constructor") name
+          (yellow "WARNING: equational premises context omitted, skipping their typing")
+    end;
 
     (* adding to the theory *)
     T.schem_rules :=
-      T.RuleTbl.add name (T.Const(List.length inst_msubst, mctx_args', inst_msubst, ty_p)) !T.schem_rules;
+      T.RuleTbl.add name (T.Const(mctx2', subst1', subst2', sort_p)) !T.schem_rules
 
-    Format.printf "[%s %s] %s@." (darkblue "constructor") name (green "OK");
-
-    (* we store info needed for typing rewrite rules *)
-    let xi_c_scope, _ =
-      split_at (List.length mscope_pars_args - List.length mscope_pars) mscope_pars_args in
-    let infos : R.cons_info =
-      {xi_p_scope   = mscope_pars;  (* |Xi_p| *)
-      xi_c_scope    = xi_c_scope;   (* |Xi_c| *)
-      xi_p          = mctx_pars';   (* Xi_p *)
-      xi_c          = mctx_args';   (* Xi_c *)
-      xi_i          = mctx_ixs';    (* Xi_i *)
-      sort          = ty';          (* sort of c *)
-      inst_msubst   = inst_msubst;  (* vv_i *)
-     } in
-    R.cons_info := R.StrTbl.add name infos !R.cons_info
-
-
-  | C.Dest(name, mctx_pars_ixs, name_arg, ty_arg, mctx_args, ty) ->
+  | C.Dest(name, mctx1, name_parg, sort_parg, mctx2, sort) ->
 
     (* scoping *)
-    let mctx_pars_ixs', mscope_pars_ixs = C.scope_mctx (mctx_pars_ixs) [] in
-    let ty_arg' = C.scope_tm ty_arg mscope_pars_ixs [] in
-    let mctx_args', mscope_pars_ixs_args = C.scope_mctx mctx_args (name_arg :: mscope_pars_ixs) in
-    let ty' = C.scope_tm ty mscope_pars_ixs_args [] in
+    let mctx1', mscope1 = C.scope_mctx mctx1 [] in
+    let sort_parg' = C.scope_tm sort_parg mscope1 [] in
+    let mctx2', mscope12 = C.scope_mctx mctx2 (name_parg :: mscope1) in
+    let sort' = C.scope_tm sort mscope12 [] in
 
-    let full_mctx = mctx_args' @ [([], ty_arg')] @ mctx_pars_ixs' in
+    let full_mctx = mctx2' @ [([], sort_parg')] @ mctx1' in
 
     (* typechecking*)
     Ty.check_mctx full_mctx;
-    Ty.check_sort full_mctx [] [] ty';
+    Ty.check_sort full_mctx [] [] sort';
 
     (* scoping of princip arg as a pattern *)
-    let ty_arg_p, ty_arg_mscope = C.scope_p_tm ty_arg in
+    let sort_parg_p, sort_parg_mscope = C.scope_p_tm sort_parg in
 
     (* we verify that it has the expected scope *)
-    assert (ty_arg_mscope = mscope_pars_ixs);
+    assert (sort_parg_mscope = mscope1);
+
+    (* checking that sort_parg_p is rigid and destructor-free *)
+    T.check_dest_free sort_parg_p;
+    T.check_rigid sort_parg_p;
 
     (* adding to the theory *)
-    T.schem_rules := T.RuleTbl.add name (T.Dest(ty_arg_p, mctx_args', ty')) !T.schem_rules;
+    T.schem_rules := T.RuleTbl.add name (T.Dest(sort_parg_p, mctx2', sort')) !T.schem_rules;
 
     Format.printf "[%s %s] %s@." (darkblue "destructor") name (green "OK");
 
-    (* we store info needed for typing rewrite rules *)
-    let infos : R.dest_info =
-    {xi_pi      = mctx_pars_ixs';        (* Xi_pi *)
-     xi_d_conc  = mctx_args;             (* Xi_d in concrete syntax *)
-     xi_d       = mctx_args';            (* Xi_d *)
-     sort_parg  = ty_arg';               (* sort of parg *)
-     sort       = ty'                    (* sort of d *)
-    } in
-    R.dest_info := R.StrTbl.add name infos !R.dest_info
+    | C.Rew(lhs, rhs) ->
 
-  | C.Rew(skip_check, mctx, lhs, rhs) ->
-
-    Format.printf "[%s] " (darkblue "equation");
+    rew_count := 1 + !rew_count;
+    Format.printf "[%s %d] " (darkblue "equation") !rew_count;
 
     let name, msubst = match lhs with
-      | Symb(name, msubst) ->
-        (* we verify that name is a destructor *)
-        (match T.RuleTbl.find name !T.schem_rules with
-        | Dest(_) -> () | _ -> assert false);
-        if msubst = [] then assert false;
-        name, msubst
+      | Symb(name, msubst) -> name, msubst
       | _ -> assert false in
 
     let p_msubst, mscope = C.scope_p_msubst msubst in
     let rhs' = C.scope_tm rhs mscope [] in
     let rews = try T.RewTbl.find name !T.rew_rules with _ -> [] in
 
-    (* checks that rule does not overlap any other one *)
-    List.iter (fun (p_msubst', _) ->
+    begin
       try
-        T.check_unify_msubst p_msubst p_msubst';
-        Format.printf "%s: the rewrite rules are overlaping@." (red "ERROR");
-        raise Overlap_detected
-      with T.Do_not_unify -> ()
-      ) rews;
+        T.check_not_break_rig (T.Sym(name, p_msubst));
+        T.check_critical_pair (T.Sym(name, p_msubst));
+        Format.printf "%s@." (green "OK")
+    with
+      | T.Breaks_ridigity(rule_name) ->
+        Format.printf "%s: lhs breaks rigidity of pattern in rule %s@." (red "ERROR") rule_name;
+        raise (T.Breaks_ridigity(rule_name))
+      | T.Critical_pair(n) ->
+        Format.printf "%s: critical pair detected with rule %d@." (yellow "WARNING") n
+    end;
 
-    if skip_check then Format.printf "%s " (yellow "skipping check")
-    else R.rewrite_rule_checker mctx name mscope (C.scope_msubst msubst mscope []) rhs';
+    T.rew_rules := T.RewTbl.add name ((!rew_count, p_msubst, rhs') :: rews) !T.rew_rules
+(*
+    begin
+      try
+        T.check_critical_pair (T.Sym(name, p_msubst));
+        Format.printf "%s@." (green "OK")
+      with T.Critical_pair(n) ->
+        Format.printf "%s: critical pair detected with rule %d@." (yellow "WARNING") n
+    end;*)
 
-    T.rew_rules := T.RewTbl.add name ((p_msubst, rhs') :: rews) !T.rew_rules;
 
-    Format.printf "%s@." (green "OK");
 
   | Eval(tm) ->
     let tm = C.scope_tm tm [] [] in

@@ -18,6 +18,7 @@ constructor U () () : Ty
 constructor c () (A : Ty) : Tm(U)
 destructor El () [a : Tm(U)] () : Ty
 equation El(c(A)) --> A
+equation c(El(a)) --> a
 
 
 (* Dependent products *)
@@ -62,7 +63,9 @@ constructor ∅ind (P : Ty) (x : Tm(∅)) : Tm(P)
 
 (* id types (aka inductive equality) *)
 constructor Id () (A : Ty, x : Tm(A), y : Tm(A)) : Ty
-constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Tm(Id(A, x, y))
+constructor refl (A : Ty, x : Tm(A), y : Tm(A)) ()
+                 (x = y : Tm(A))
+                 : Tm(Id(A, x, y))
 
 (* we cannot omit any of the arguments, because they will be computationally
    relevant: later we will add another rewrite rule for J which will need
@@ -74,10 +77,7 @@ destructor  J   () [A : Ty]
                  p : Tm(P{x, refl}))
             : Tm(P{y, e})
 
-(* a consequence of this is that we need to linearize the following rule,
-   whose well-typedness now cannot be checked automatically by the implementation *)
-equation skipcheck
-    J(A, x, x', refl, x e.P{x, e}, p) --> p
+equation J(A, x, x', refl, x e.P{x, e}, p) --> p
 
 let congId (A : Ty, x : Tm(A), y : Tm(A),
             e : Tm(Id(A, x, y)), P : Ty, p {x : Tm(A)} : Tm(P))
@@ -99,8 +99,9 @@ sort Prf (P : Prop)
 (* heterogeneous observational equality *)
 constructor Eq () (A : Ty, a : Tm(A), b : Tm(A)) : Prop
 
-constructor refleq (A : Ty, a : Tm(A)) ()
-                 (a / b : Tm(A)) : Prf(Eq(A, a, b))
+constructor refleq (A : Ty, a : Tm(A), b : Tm(A)) ()
+                 (a = b : Tm(A))
+                : Prf(Eq(A, a, b))
 
 (* the following two symbols (mk and cast) are the only way to
    escape from Prop to Ty *)
@@ -186,20 +187,14 @@ destructor EqUIdId_e3 (A : Ty, x : Tm(A), y : Tm(A),
 
 (* computation rules for cast *)
 
-equation   (A : Ty, B{x : Tm(A)} : Ty, A' : Ty, B'{x' : Tm( A')} : Ty,
-            e : Prf(Eq(U, c(Π(A, x.B{x})), c(Π(A', x'.B'{x'})))),
-            t : Tm( Π(A, x.B{x})))
-
-    cast(Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
+equation cast(Π(A, x. B{x}), Π(A', x'. B'{x'}), e, t)
     -->  λ(x'.
             let x := cast(A', A, sym(EqUΠΠ_e1(e)), x') in
             cast(B{x}, B'{x'}, EqUΠΠ_e2(e, x'), ﹫(t, x)))
 
-equation (e : Prf(Eq(U, c(∅), c(∅))), t : Tm( ∅))
-    cast(∅, ∅, e, t) --> t
+equation cast(∅, ∅, e, t) --> t
 
-equation (e : Prf(Eq(U, c(ℕ), c(ℕ))), t : Tm( ℕ))
-    cast(ℕ, ℕ, e, t) --> t
+equation cast(ℕ, ℕ, e, t) --> t
 
 let rhs' (A : Ty, x : Tm(A), y : Tm(A),
           A' : Ty, x' : Tm( A'), y' : Tm( A'),
@@ -214,12 +209,7 @@ let rhs' (A : Ty, x : Tm(A), y : Tm(A),
     transId(A', x', ﹫(f, x), y', x'≡fx,
         transId(A', ﹫(f, x), ﹫(f, y), y', fx≡fy, fy≡y'))
 
-equation (A : Ty,  x  : Tm(A),  y  : Tm(A),
-          A' : Ty, x' : Tm(A'), y' : Tm(A'),
-          e : Prf(Eq(U, c(Id(A, x, y)), c(Id(A', x', y')))),
-          t : Tm(Id(A, x, y)))
-
-    cast(Id(A, x, y), Id(A', x', y'), e, t) -->
+equation cast(Id(A, x, y), Id(A', x', y'), e, t) -->
     rhs'(A, x, y, A', x', y', e, t)
 
 let congEq (A : Ty, x : Tm(A), y : Tm(A),
@@ -243,9 +233,8 @@ let rhs (A : Ty, x : Tm(A), y : Tm(A),
         : Tm( P{y, mk(e)})
     := cast(P{x, refl}, P{y, mk(e)}, eqJ(A, x, y, e, x p. P{x, p}), p)
 
-(* once again, this rewrite rule cannot be checked automatically by our implementation *)
-equation skipcheck
-    J(A, x, y, mk(e), x e.P{x, e}, p) --> rhs(A, x, y, e, x e. P{x, e}, p)
+
+equation J(A, x, y, mk(e), x e.P{x, e}, p) --> rhs(A, x, y, e, x e. P{x, e}, p)
 
 (* =========================== *)
 (* --- END OF PRIVATE PART --- *)

@@ -18,11 +18,9 @@ constructor raiseTy () (e : Ex) : Ty(𝓔)
 
 
 (* □ injects the exceptional world into the pure world:
-   Tm(𝓔, A) is a retract of Tm(𝓟, □(A)) *)
+   Tm(𝓟, □(A)) = Tm(𝓔, A) *)
 constructor □ () (A : Ty(𝓔)) : Ty(𝓟)
-constructor box (A : Ty(𝓔)) (t : Tm(𝓔, A)) : Tm(𝓟, □(A))
-destructor unbox (A : Ty(𝓔)) [t : Tm(𝓟, □(A))] () : Tm(𝓔, A)
-equation unbox(box(t)) --> t
+equation Tm(𝓟, □(A)) --> Tm(𝓔, A)
 
 (* note that adding a symmetric operator going in the
    other direction would render all types in 𝓟 inhabited *)
@@ -32,7 +30,7 @@ equation unbox(box(t)) --> t
 constructor U (m : 𝔐) () : Ty(m)
 destructor El (m : 𝔐) [A : Tm(m, U)] () : Ty(m)
 
-equation skipcheck El(raise(e)) --> raiseTy(e)
+equation El(raise(e)) --> raiseTy(e)
 
 (* Dependent products *)
 constructor Π   (m : 𝔐)
@@ -50,7 +48,7 @@ destructor ﹫   (m : 𝔐, A : Ty(m), B{x : Tm(m, A)} : Ty(m))
 
 equation ﹫(λ(x. t{x}), u) --> t{u}
 
-equation skipcheck ﹫(raise(e), u) --> raise(e)
+equation ﹫(raise(e), u) --> raise(e)
 
 (* code in U for Π *)
 constructor π (m : 𝔐) (a : Tm(m, U), b{_ : Tm(m, El(a))} : Tm(m, U)) : Tm(m, U)
@@ -72,8 +70,8 @@ destructor if𝓟 () [x : Tm(𝓟, Bool)]
                    a : Tm(m, P{tt}),
                    b : Tm(m, P{ff})) : Tm(m, P{x})
 
-equation skipcheck if𝓟(tt, m, x.P{x}, a, b) --> a
-equation skipcheck if𝓟(ff, m, x.P{x}, a, b) --> b
+equation if𝓟(tt, m, x.P{x}, a, b) --> a
+equation if𝓟(ff, m, x.P{x}, a, b) --> b
 
 
 destructor if𝓔 () [x : Tm(𝓔, Bool)]
@@ -81,9 +79,9 @@ destructor if𝓔 () [x : Tm(𝓔, Bool)]
                    a : Tm(𝓔, P{tt}),
                    b : Tm(𝓔, P{ff})) : Tm(𝓔, P{x})
 
-equation skipcheck if𝓔(tt, x.P{x}, a, b) --> a
-equation skipcheck if𝓔(ff, x.P{x}, a, b) --> b
-equation skipcheck if𝓔(raise(e), x.P{x}, a, b) --> raise(e)
+equation if𝓔(tt, x.P{x}, a, b) --> a
+equation if𝓔(ff, x.P{x}, a, b) --> b
+equation if𝓔(raise(e), x.P{x}, a, b) --> raise(e)
 
 
 destructor catchBool () [x : Tm(𝓔, Bool)]
@@ -94,9 +92,9 @@ destructor catchBool () [x : Tm(𝓔, Bool)]
                       perr{e : Ex} : Tm(m, P{raise(e)}))
                       : Tm(m, P{x})
 
-equation skipcheck catchBool(tt, m, x.P{x}, a, b, e. perr{e}) --> a
-equation skipcheck catchBool(ff, m, x.P{x}, a, b, e. perr{e}) --> b
-equation skipcheck catchBool(raise(e), m, x.P{x}, a, b, e. perr{e}) --> perr{e}
+equation catchBool(tt, m, x.P{x}, a, b, e. perr{e}) --> a
+equation catchBool(ff, m, x.P{x}, a, b, e. perr{e}) --> b
+equation catchBool(raise(e), m, x.P{x}, a, b, e. perr{e}) --> perr{e}
 
 
 constructor bool (m : 𝔐) () : Tm(m, U)

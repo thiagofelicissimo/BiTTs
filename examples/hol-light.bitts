@@ -23,7 +23,9 @@ constructor ε (A : Ty) (P {_ : Tm(A)} : Tm(prop)) : Tm(A)
 
 constructor Eq () (A : Ty, x : Tm(A), y : Tm(A)) : Tm(prop)
 
-constructor refl (A : Ty, x : Tm(A)) () (x / y : Tm(A)) : Prf(Eq(A, x, y))
+constructor refl (A : Ty, x : Tm(A), y : Tm(A)) ()
+                 (x = y : Tm(A))
+                 : Prf(Eq(A, x, y))
 
 constructor sym (A : Ty, x : Tm(A), y : Tm(A)) (e : Prf(Eq(A, y, x))) : Prf(Eq(A, x, y))
 
