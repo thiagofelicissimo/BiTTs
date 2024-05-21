@@ -22,11 +22,11 @@ Once all the dependencies are installed it suffices to run `make mltt` (or `make
 
 ## How to use
 
-This project implements the generic bidirectional typing algorithm proposed in [1]. Therefore, when using it one first specifies a type theory to work in and then writes terms inside this theory, which are typechecked by the implementation. In order for the typechecker to be sound the specified theory must be *valid* (see the definition in [1]), a condition that the implementation tries to check automatically.
+This project implements the generic bidirectional typing algorithm proposed in [1]. Therefore, when using it one first specifies a type theory to work in and then writes terms inside this theory, which are typechecked by the implementation.
 
 ### Specifying theories
 
-As described in [1], theories are specified by four types of entries: sort rules, constructor rules, destructor rules and rewrite rules. We now show how these can be specified in the concrete syntax of the implementation. In the following, we take the definitions of terms, substitutions, context, patterns, etc from *op. cit.*. We also recommend looking at the file `examples/mltt.bitts` for more examples of how to define theories.
+Theories are specified by four types of entries: sort rules, constructor rules, destructor rules and rewrite rules. We now show how these can be specified in the concrete syntax of the implementation. In the following, we take the definitions of terms, substitutions, context, patterns, etc from *op. cit.*. We also recommend looking at the file `examples/mltt.bitts` for more examples of how to define theories.
 
 
 
@@ -41,7 +41,7 @@ sort Tm (A : Ty)
 
 #### Constructor rules
 
-Constructor rules are specified by the keyword `constructor` along with an identifier, a metavariable context $\Xi_p$ of *erased arguments* (meaning that they are omitted from the syntax), a metavariable context $\Xi_c$ of non-erased arguments and a sort $T$. In addition, the sort $T$ should be a pattern containing exactly the metavariables of $\Xi_p$, in the same order as specified in $\Xi_p$. For instance, we can define constructors for Π and λ with the following declarations (note that we support names with Unicode).
+Constructor rules are specified by the keyword `constructor` along with an identifier, a metavariable context $\Xi_1$ of *erased arguments* (meaning that they are omitted from the syntax), a metavariable context $\Xi_2$ of non-erased arguments and a sort $T$. In addition, the sort $T$ should be a (linear) pattern containing exactly the metavariables of $\Xi_1$, in the same order as specified in $\Xi_1$. For instance, we can define constructors for Π and λ with the following declarations (note that we support names with Unicode).
 ```
 constructor Π () (A : Ty, B{x : Tm(A)} : Ty) : Ty
 
@@ -50,32 +50,29 @@ constructor λ (A : Ty, B{x : Tm(A)} : Ty)
               : Tm(Π(A, x. B{x}))
 ```
 
-##### Indexed constructors
 
-The previous description covers non-indexed types. In order to specify constructors of an indexed type (such as equality), we also consider a metavariable context $\Xi_i$ of *indices*. Then, the sort $T$ must now be a pattern on the metavariables of $\Xi_p$ and $\Xi_i$. Finally, we need to give an *instantiation substitution*, specifying the values of the metavariables in $\Xi_i$ in terms of the ones in $\Xi_p$ and $\Xi_c$.
-
-For instance, in the case of refl we declare the metavariable $y$ as an index, and the instantiation substitution assigns it the value $x$. In the case of the constructors for vectors, we declare the natural number $n$ as an index and assign it the value $0$ in the case of nil and $S(m)$ in the case of cons.
+The previous description covers non-indexed types. In order to allow for specifying constructors of an indexed type (such as equality), constructor rules also support equality premises, as illustrated in the following two examples. This is needed because the sort of a constructor rule must be a (linear) pattern precisely on the erased arguments (note that we cannot omit the argument `m` in `consV` because it is needed when writing the rewrite rules for the recursor).
 ```
 (* Equality *)
 constructor Eq () (A : Ty, x : Tm(A), y : Tm(A)) : Ty
 
-constructor refl (A : Ty, x : Tm(A))
+constructor refl (A : Ty, x : Tm(A), y : Tm(A))
                  ()
-                 (x / y : Tm(A))
+                 (x = y : Tm(A))
             : Tm(Eq(A, x, y))
 ...
 
 (* Vectors *)
 constructor Vec () (A : Ty, n : Tm(ℕ)) : Ty
 
-constructor nilV  (A : Ty)
+constructor nilV  (A : Ty, n : Tm(ℕ))
                   ()
-                  (0 / n : Tm(ℕ))
+                  (n = 0 : Tm(ℕ))
                 : Tm(Vec(A, n))
 
-constructor consV (A : Ty)
+constructor consV (A : Ty, n : Tm(ℕ))
                   (m : Tm(ℕ), a : Tm(A), l : Tm(Vec(A, m)))
-                  (S(m) / n : Tm(ℕ))
+                  (n = S(m) : Tm(ℕ))
                 : Tm(Vec(A, n))
 ...
 ```
@@ -83,10 +80,10 @@ constructor consV (A : Ty)
 
 #### Destructor rules
 
-Destructor rules are specified by the keyword `destructor` along with an identifier, a metavariable context $\Xi_p$ of erased arguments, a principal argument $x : T$, a metavariable context $\Xi_d$ of non-erased arguments and a sort $U$. In addition, the sort $T$ should be a pattern containing exactly the metavariables of $\Xi_p$, in the same order as specified in $\Xi_p$. For instance, we can define application as the following destructor.
+Destructor rules are specified by the keyword `destructor` along with an identifier, a metavariable context $\Xi_1$ of erased arguments, a principal argument $x : T$, a metavariable context $\Xi_2$ of non-erased arguments and a sort $U$. In addition, the sort $T$ should be a pattern containing exactly the metavariables of $\Xi_1$, in the same order as specified in $\Xi_1$. For instance, we can define application as the following destructor.
 ```
 destructor ﹫ (A : Ty, B{x : Tm(A)} : Ty)
-              (t : Tm(Π(A, x. B{x})))
+              [t : Tm(Π(A, x. B{x}))]
               (u : Tm(A))
               : Tm(B{u})
 ```
@@ -94,15 +91,23 @@ destructor ﹫ (A : Ty, B{x : Tm(A)} : Ty)
 
 #### Rewrite rules
 
-Rewrite rules are specified by the keyword `equation` along with a left-hand side headed by a destructor and whose arguments are patterns, and a right-hand side which contains only the metavariables introduced by the left-hand side. The arguments of the destructor should be *linear* (no metavariable occurs twice) and contain no destructors.
-
-For instance, we can add $\beta$-reduction with the following rule.
+Rewrite rules are specified by the keyword `equation` along with a left-hand side which should be a (linear) pattern. For instance, we can add $\beta$-reduction with the following rule.
 ```
 equation ﹫(λ(x. t{x}), u) --> t{u}
 ```
 
-In order for the rule to be accepted, the implementation tries to check that it preserves typing. Still, in many cases the automatic checker is not able to conclude by itself. If you are getting weird error messages, you can try to specify the metavariable context explicitly (see the file `ott.bitts` for an example of this). Otherwise, the check can also be skipped with the `skipcheck` keyword, by writing `equation skipcheck lhs --> rhs`. It is then the responsibility of the user to verify manually that the rule preserves typing.
+#### Conditions required for the algorithm to be correct
 
+The results of [1] ensure that the type-checker implemented is indeed sound for the bidirectional theory specified by the used, when the following  conditions are met:
+
+- (A).(I) Sort, constructor and destructor rules are well-typed.
+- (A).(II) The rewrite system is confluent.
+- (A).(III) The rewrite system satisfies subject reduction.
+- (B) The patterns of constructor and destructor rules should be (i) *destructor-free* (that is, contain no occurrences of destructors) and (ii) *rigid* (that is, if some subterm of the pattern unifies with the left-hand side of a rewrite rule, then the subterm must be headed by a metavariable). Recall that the pattern of a constructor rule is its sort, and the pattern of a destructor rule is the sort of the principal argument.
+
+In order to help the user, the implementation verifies (B) automatically, and reports on any critical pairs, so if there are none then (A).(II) is true because the rewrite system is orthogonal. If also verifies (A).(I), however for the verification to be correct all prefixes of the theory must satisfy confluence and subject reduction.
+
+We refer to [1] for more details, though unfortunately this reference is at the moment not completely up to date.
 
 
 ### Typechecking terms
@@ -174,6 +179,8 @@ The implementation of rewriting uses a form of untyped NbE with de Bruijn indice
 
 ## References
 
-[1] [Generic bidirectional typing for dependent type theories. Thiago Felicissimo.](https://arxiv.org/abs/2307.08523)
+
+
+[1] [Generic bidirectional typing for dependent type theories. Thiago Felicissimo.](https://arxiv.org/abs/2307.08523) (WARNING: This reference is for now not completely up to date with the implementation)
 
 [2] [Computability Beyond Church-Turing via Choice Sequences. Mark Bickford, Liron Cohen, Robert L. Constable, Vincent Rahli](https://dl.acm.org/doi/10.1145/3209108.3209200).

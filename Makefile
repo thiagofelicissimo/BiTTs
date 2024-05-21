@@ -10,6 +10,8 @@ all-examples:
 	dune exec -- bitts examples/mltt-tarski.bitts
 	dune exec -- bitts examples/mltt-coquand.bitts
 	dune exec -- bitts examples/mltt-tarski-heterogeneous.bitts
+	dune exec -- bitts examples/mltt-russell.bitts
+	dune exec -- bitts examples/mltt-russell-2.bitts
 	dune exec -- bitts examples/ott.bitts
 	dune exec -- bitts examples/ott-2.bitts
 	dune exec -- bitts examples/mltt-funext-canonicity.bitts

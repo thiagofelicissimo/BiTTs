@@ -1,0 +1,88 @@
+(* yet another version of MLTT with cumulative Russell-style universes, and universe polymorphism.
+   this is similar to a version from Jon Sterling's thesis, Figure 1.2, and has the advantage
+   over "mltt-russell.bitts" of allowing for a lift that commutes with type formers. *)
+
+sort Ty ()
+sort Tm (A : Ty)
+
+sort Lvl ()
+constructor 0ₗ () () : Lvl
+constructor Sₗ () (_ : Lvl) : Lvl
+
+sort ty (i : Lvl)
+sort tm (i : Lvl, a : ty(i))
+
+(* we define tm(i, a) as meaning Tm(⇑(i, a)) *)
+constructor ⇑ () (i : Lvl, A : ty(i)) : Ty
+equation tm(i, a) --> Tm(⇑(i, a))
+
+constructor U () (i : Lvl) : Ty
+equation Tm(U(i)) --> ty(i)
+
+
+constructor ↑ (l : Lvl) (A : ty(l)) : ty(Sₗ(l))
+equation ⇑(Sₗ(i), ↑(a)) --> ⇑(i, a)
+
+constructor 𝑢 (i : Lvl) () : ty(Sₗ(i))
+equation ⇑(Sₗ(i), 𝑢) --> U(i)
+
+
+(* Dependent products *)
+constructor Π () (A : Ty, B {x : Tm(A)} : Ty) : Ty
+constructor λ (A : Ty, B {x : Tm(A)} : Ty) (t{x : Tm(A)} : Tm(B{x}))
+        : Tm(Π(A, x. B{x}))
+destructor ﹫ (A : Ty, B {x : Tm(A)} : Ty) [t : Tm(Π(A, x. B{x}))] (u : Tm(A))
+        : Tm(B{u})
+equation ﹫(λ(x. t{x}), u) --> t{u}
+
+constructor π (i : Lvl) (a : ty(i), b{x : Tm(⇑(i, a))} : ty(i)) : ty(i)
+equation ⇑(i, π(A, x. B{x})) --> Π(⇑(i, A), x. ⇑(i, B{x}))
+
+(* this rule creates a critical pair with rule 3.
+   however, the critical pair can be joined, and the rules are terminating
+   without beta, and thus confluent. then, we conclude the confluence with beta
+   because beta is confluent by orthogonality and does not create a critical pair
+   with the rest of the rewrite system *)
+equation ↑(π(A, x. B{x})) --> π(↑(A), x. ↑(B{x}))
+
+
+(* Natural numbers *)
+constructor ℕ () () : Ty
+constructor 0 () () : Tm(ℕ)
+constructor S () (n : Tm(ℕ)) : Tm(ℕ)
+
+destructor ℕ_ind    ()
+                    [n : Tm(ℕ)]
+                    (P {x : Tm(ℕ)} : Ty,
+                     p0 : Tm(P{0}),
+                     ps {n : Tm(ℕ), pn : Tm(P{n})} : Tm(P{S(n)}))
+                (* ------------ *)
+                    : Tm(P{n})
+
+equation ℕ_ind(0, x. P{x}, p0, n pn. ps{n, pn}) --> p0
+equation ℕ_ind(S(n), x. P{x}, p0, n pn. ps{n, pn}) -->
+    ps{n, ℕ_ind(n, x. P{x}, p0, n pn. ps{n, pn})}
+
+
+constructor nat (i : Lvl) () : ty(i)
+equation ⇑(i, nat) --> ℕ
+
+(* same remark as for the rule envolving ↑ and π *)
+equation ↑(nat) --> nat
+
+(* universe polymorphism (quantification over levels) *)
+constructor ∀ () (A {i : Lvl} : Ty) : Ty
+constructor Λ (A {i : Lvl} : Ty) (t{i : Lvl} : Tm(A{i}))
+        : Tm(∀(i. A{i}))
+destructor inst (A {i : Lvl} : Ty) [t : Tm(∀(i. A{i}))] (l : Lvl)
+        : Tm(A{l})
+equation inst(Λ(i. t{i}), l) --> t{l}
+
+
+(* universe polymorphic id function *)
+let id_poly : Tm(∀(i. ⇑(Sₗ(i), π(𝑢, A. π(↑(A), _. ↑(A))))))
+    :=  Λ(i. λ(a. λ(x. x)))
+
+(* applying it to 0 *)
+let 0' : tm(0ₗ, nat) := ﹫(﹫(inst(id_poly, 0ₗ), nat), 0)
+assert 0' = 0

@@ -24,9 +24,9 @@ type entry =
   | Let of string * mctx * tm * tm
   | Sort of string * mctx
   | Cons of string * mctx * mctx * subst   * subst   * ctx option * tm
-    (*      c       (Xi_1) (Xi_2) (\vec{t} = \vec{u}) (Delta) :     T *)
+    (*      c       (Xi_1) (Xi_2) (\vec{t} = \vec{u} : Delta)) :    T *)
   | Dest of string * mctx * string * tm * mctx  * tm
-    (*      d       (Xi_1) (x :      T)  (Xi_2) : U *)
+    (*      d       (Xi_1) [x :      T]  (Xi_2) : U *)
   | Rew of tm * tm
   | Eval of tm
   | Eq of tm * tm
@@ -202,14 +202,14 @@ let pp_entry fmt entry =
     fprintf fmt "constructor %s (%a) (%a) (%a = %a) : %a@."
       name pp_mctx mctx1 pp_mctx mctx2 pp_subst subst1 pp_subst subst2 pp_term ty
   | Cons(name, mctx1, mctx2, subst1, subst2, Some(ctx), ty) ->
-    fprintf fmt "constructor %s (%a) (%a) (%a = %a) (%a) : %a@."
+    fprintf fmt "constructor %s (%a) (%a) (%a = %a : (%a)) : %a@."
       name pp_mctx mctx1 pp_mctx mctx2
       pp_subst subst1 pp_subst subst2 pp_ctx ctx pp_term ty
   | Dest(name, mctx1, name_arg, ty_arg, mctx2, ty) ->
-    fprintf fmt "destructor %s (%a) (%s : %a) (%a) : %a@."
+    fprintf fmt "destructor %s (%a) [%s : %a] (%a) : %a@."
     name pp_mctx mctx1 name_arg pp_term ty_arg pp_mctx mctx2 pp_term ty
   | Rew(lhs, rhs) ->
-    fprintf fmt "rewrite %a --> %a@." pp_term lhs pp_term rhs
+    fprintf fmt "equation %a --> %a@." pp_term lhs pp_term rhs
   | Let(name, mctx, ty, t) ->
     fprintf fmt "let %s (%a) : %a := %a@." name pp_mctx mctx pp_term ty pp_term t
   | Eval(t) -> fprintf fmt "eval %a@." pp_term t
