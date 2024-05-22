@@ -26,7 +26,7 @@ This project implements the generic bidirectional typing algorithm proposed in [
 
 ### Specifying theories
 
-Theories are specified by four types of entries: sort rules, constructor rules, destructor rules and rewrite rules. We now show how these can be specified in the concrete syntax of the implementation. In the following, we take the definitions of terms, substitutions, context, patterns, etc from *op. cit.*. We also recommend looking at the file `examples/mltt.bitts` for more examples of how to define theories.
+Theories are specified by four types of entries: sort rules, constructor rules, destructor rules and rewrite rules. We now show how these can be specified in the concrete syntax of the implementation. We also recommend looking at the file `examples/mltt.bitts` for more examples of how to define theories.
 
 
 
@@ -91,7 +91,7 @@ destructor ﹫ (A : Ty, B{x : Tm(A)} : Ty)
 
 #### Rewrite rules
 
-Rewrite rules are specified by the keyword `equation` along with a left-hand side which should be a (linear) pattern. For instance, we can add $\beta$-reduction with the following rule.
+Rewrite rules are specified by the keyword `equation` along with a left-hand side which should be a (linear) pattern, and a right-hand side. For instance, we can add $\beta$-reduction with the following rule.
 ```
 equation ﹫(λ(x. t{x}), u) --> t{u}
 ```
@@ -105,7 +105,7 @@ The results of [1] ensure that the type-checker implemented is indeed sound for 
 - (A).(III) The rewrite system satisfies subject reduction.
 - (B) The patterns of constructor and destructor rules should be (i) *destructor-free* (that is, contain no occurrences of destructors) and (ii) *rigid* (that is, if some subterm of the pattern unifies with the left-hand side of a rewrite rule, then the subterm must be headed by a metavariable). Recall that the pattern of a constructor rule is its sort, and the pattern of a destructor rule is the sort of the principal argument.
 
-In order to help the user, the implementation verifies (B) automatically, and reports on any critical pairs, so if there are none then (A).(II) is true because the rewrite system is orthogonal. If also verifies (A).(I), however for the verification to be correct all prefixes of the theory must satisfy confluence and subject reduction.
+In order to help the user, the implementation verifies (B) automatically, and reports on any critical pairs, so if there are none then (A).(II) is true because the rewrite system is orthogonal. It also verifies (A).(I), however for the verification to be correct it assumes that all prefixes of the theory satisfy confluence and subject reduction.
 
 We refer to [1] for more details, though unfortunately this reference is at the moment not completely up to date.
 
@@ -118,7 +118,7 @@ let idU : Tm(Π(U, a. Π(El(a), _. El(a)))) := λ(a. λ(x. x))
 ```
 In order to check this definition, the typechecker first verifies that the given sort is well-typed and then checks the body of the definition against it. If typechecking succeeds, then the definition becomes available to be used in other terms defined later.
 
-As discussed in [1], not all well-typed terms can be written directly. Whenever a destructor meets a constructor, the user needs to add a *sort ascription*. This typically happens when writing redices:
+As discussed in [1], not all well-typed terms can be directly written. Whenever a destructor meets a constructor, the user needs to add a *sort ascription*. This typically happens when writing redices:
 ```
 let redex : Tm(ℕ) := ﹫(λ(x. x) :: Tm(Π(ℕ, _. ℕ)), 0)
 ```
@@ -153,7 +153,7 @@ We provide the following examples of theories in the directory `examples/`:
 
 - `hol.bitts` : Higher-Order Logic (also known as Simple Type Theory) with implication and universal quantification. We give some example of terms we can write in the theory, including an impredicative definition of conjunction along with its derived introduction and elimination rules.
 
-- `mltt-tarski.bitts` and `mltt-coquand.bitts` : Martin-Lof Type Theory with an hierarchy of (weak) cumulative Tarski- and Coquand-style universes and universe polymorphism, with Π types and natural numbers. As an example of term we can write in this theory, we give the universe-polymorphic identity function.
+- `mltt-tarski.bitts` and `mltt-coquand.bitts` and `mltt-russell.bitts` : Martin-Lof Type Theory with an hierarchy of cumulative Tarski-, Coquand- and Russell- style universes and universe polymorphism, with Π types and natural numbers. As an example of term we can write in this theory, we give the universe-polymorphic identity function.
 
 
 - `ott.bitts` and `ott-2.bitts` : Two variants of McBride & Altenkirch's Observational Type Theory, with an heterogeneous equality and a Tarski-style universe, or with an homogeneous equality and a type-in-type Coquand-style universe. As an example, we given the definition of natural numbers in terms of W-types and derive its eliminator.

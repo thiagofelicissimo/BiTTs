@@ -8,7 +8,7 @@ constructor Sₗ () (_ : Lvl) : Lvl
 sort Ty (l : Lvl)
 sort Tm (l : Lvl, A : Ty(l))
 
-(* Russel-style Universes: Tm(U(l)) = Ty(l) *)
+(* Russell-style Universes: Tm(U(l)) = Ty(l) *)
 constructor U (l : Lvl) () : Ty(Sₗ(l))
 equation Tm(Sₗ(l), U) --> Ty(l)
 
@@ -34,7 +34,8 @@ equation ﹫(λ(x. t{x}), u) --> t{u}
    invalidating condition (A).(II) of the definition of valid bidirectional
    theories, whereas orienting it right-to-left creates an overlap with the
    sort of λ, invalidating condition (B) of the definition of valid
-   bidirectional theories *)
+   bidirectional theories. however, see `mltt-russell-2.bitts`, where
+   this can be done. *)
 
 (* Natural numbers *)
 constructor ℕ () () : Ty(0ₗ)

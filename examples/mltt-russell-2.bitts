@@ -1,6 +1,8 @@
 (* yet another version of MLTT with cumulative Russell-style universes, and universe polymorphism.
    this is similar to a version from Jon Sterling's thesis, Figure 1.2, and has the advantage
-   over "mltt-russell.bitts" of allowing for a lift that commutes with type formers. *)
+   over "mltt-russell.bitts" of allowing for a lift that commutes with type formers.
+   (observation: actually, this is just tarski-style universes in disguise, as we can see
+   ⇑ as the equivalent to El, and ty(i) as the equivalent of Tm(U(i)) )*)
 
 sort Ty ()
 sort Tm (A : Ty)
@@ -41,8 +43,8 @@ equation ⇑(i, π(A, x. B{x})) --> Π(⇑(i, A), x. ⇑(i, B{x}))
 (* this rule creates a critical pair with rule 3.
    however, the critical pair can be joined, and the rules are terminating
    without beta, and thus confluent. then, we conclude the confluence with beta
-   because beta is confluent by orthogonality and does not create a critical pair
-   with the rest of the rewrite system *)
+   because beta is confluent by itself by orthogonality and does not create
+   critical pairs with the rest of the rewrite system *)
 equation ↑(π(A, x. B{x})) --> π(↑(A), x. ↑(B{x}))
 
 
