@@ -181,6 +181,6 @@ The implementation of rewriting uses a form of untyped NbE with de Bruijn indice
 
 
 
-[1] [Generic bidirectional typing for dependent type theories. Thiago Felicissimo.](https://arxiv.org/abs/2307.08523) (WARNING: This reference is for now not completely up to date with the implementation)
+[1] [Generic Bidirectional Typing in a Logical Framework for Dependent Type Theories. Thiago Felicissimo.](https://github.com/thiagofelicissimo/my-files/blob/master/phd-thesis.pdf?raw=true) The relevant parts are Chapters 7 and 8.
 
 [2] [Computability Beyond Church-Turing via Choice Sequences. Mark Bickford, Liron Cohen, Robert L. Constable, Vincent Rahli](https://dl.acm.org/doi/10.1145/3209108.3209200).
