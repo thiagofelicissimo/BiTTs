@@ -105,9 +105,7 @@ The results of [1] ensure that the type-checker implemented is indeed sound for 
 - (A).(III) The rewrite system satisfies subject reduction.
 - (B) The patterns of constructor and destructor rules should be (i) *destructor-free* (that is, contain no occurrences of destructors) and (ii) *rigid* (that is, if some subterm of the pattern unifies with the left-hand side of a rewrite rule, then the subterm must be headed by a metavariable). Recall that the pattern of a constructor rule is its sort, and the pattern of a destructor rule is the sort of the principal argument.
 
-In order to help the user, the implementation verifies (B) automatically, and reports on any critical pairs, so if there are none then (A).(II) is true because the rewrite system is orthogonal. It also verifies (A).(I), however for the verification to be correct it assumes that all prefixes of the theory satisfy confluence and subject reduction.
-
-We refer to [1] for more details, though unfortunately this reference is at the moment not completely up to date.
+In order to help the user, the implementation verifies (B) automatically, and reports on any critical pairs, so if there are none then (A).(II) is true because the rewrite system is orthogonal. It also verifies (A).(I), however for the verification to be correct it assumes that all prefixes of the theory satisfy confluence and subject reduction. We refer to [1] for more details.
 
 
 ### Typechecking terms
